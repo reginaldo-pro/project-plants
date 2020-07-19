@@ -1,5 +1,4 @@
 import axios from "axios";
-import Papa from 'papaparse'
 
 const db = require('../db')
 // Entry
@@ -21,6 +20,12 @@ const getCSV = async (cond) => {
 const updateCSV = async (entry, newEntry) => {
     return await db.csv.update(entry, newEntry)
 }
+const deleteCSV = async (entry) => {
+    return await db.entry.remove({fileName: entry['fileName']}).then(()=>{
+      return db.csv.remove(entry)
+    })
+}
+
 // Flora
 const insertPlantsFloraDoBrazil = async (entry) => {
     return await db.plantsFloraDoBrazil.insert(entry)
@@ -55,7 +60,7 @@ const getPlantsGBIF = async (cond) => {
 
 const loadFDBOffline = async (obj) => {
     return new Promise(resolve => {
-        try{
+        try {
             getPlantsFloraDoBrazil({entry_name: obj.name}).then((data) => {
                 if (data.length > 0) {
                     resolve(data[0])
@@ -63,8 +68,7 @@ const loadFDBOffline = async (obj) => {
                     resolve({})
                 }
             })
-        }
-        catch (e) {
+        } catch (e) {
             return null
         }
     })
@@ -80,15 +84,14 @@ const loadTPLOffline = async (obj) => {
                     resolve({})
                 }
             })
-        }
-        catch (e) {
+        } catch (e) {
             return null
         }
     })
 }
 const loadGBIFOffline = async (obj) => {
     return new Promise(resolve => {
-        try{
+        try {
             getPlantsGBIF({entry_name: obj.name}).then((data) => {
                 if (data.length > 0) {
                     resolve(data[0])
@@ -102,15 +105,14 @@ const loadGBIFOffline = async (obj) => {
                     })
                 }
             })
-        }
-        catch (e) {
+        } catch (e) {
             return null
         }
     })
 }
 const loadGBIF = async (obj) => {
     return new Promise(resolve => {
-        try{
+        try {
             if (!obj.usageKey) {
                 resolve({})
             } else {
@@ -159,20 +161,22 @@ const loadGBIF = async (obj) => {
                     }
                 })
             }
-        }
-        catch (e) {
+        } catch (e) {
             return null
         }
     })
 }
 const insertOrUpdateCSV = async (obj) => {
     return new Promise(resolve => {
-        return getCSV(obj).then((data) => {
-            if (data.length > 0) {
-                resolve(data[0])
+
+        return db.csv.findOne({name: obj.fileName}).then((data) => {
+            if (!data) {
+                resolve(db.csv.insert({name: obj.fileName}))
             } else {
-                insertCSV(obj).then(data => {
-                    resolve(data)
+                return db.csv.update({name: obj.fileName}, {name: obj.fileName}).then(d => {
+                    return db.csv.findOne({name: obj.fileName}).then(data => {
+                        resolve(data)
+                    })
                 })
             }
         })
@@ -190,5 +194,5 @@ export {
     updatePlantsFloraDoBrazil,
     loadGBIF,
     insertCSV, getCSV, updateCSV, insertOrUpdateCSV,
-    loadFDBOffline, loadGBIFOffline, loadTPLOffline
+    loadFDBOffline, loadGBIFOffline, loadTPLOffline, deleteCSV
 }

@@ -11,7 +11,7 @@
         <div class="pt5 nb5" id="standard-sizes" v-if="completedSteps !== totalSteps">
 
             <div :class="box_cls" :style="box_style">
-                <div :class="label_cls" class="text-center">Loading data<strong></strong></div>
+                <div :class="label_cls" class="text-center">Loading data <strong><a href="#" v-on:click.stop="reloadPage">Travou? clique para recarregar</a></strong></div>
                 <progress-bar size="tiny" :val="(completedSteps/totalSteps )*100"
                               :text="'Completo: '+ completedSteps +' de ' + totalSteps"/>
             </div>
@@ -42,9 +42,10 @@
 <script>
     import vue2Dropzone from "vue2-dropzone";
     import ProgressBar from "vue-simple-progress";
-    import {getEntries, loadFDBOffline, loadGBIFOffline, loadTPLOffline} from "../../api";
-    import {loadCorrection} from "../../api/GBIF";
+    import {getEntries, loadGBIFOffline} from "../../api";
     import Papa from "papaparse";
+    import {FDBget} from "../../api/FloraDoBrazil";
+    import {TPLget} from "../../api/ThePlantList";
 
     export default {
         name: "BaseOnline",
@@ -53,6 +54,7 @@
             ProgressBar
         },
         created() {
+
             this.csv = this.$route.params.csv;
             this.site_a = this.$route.params.site_a;
             this.site_b = this.$route.params.site_b;
@@ -92,6 +94,9 @@
             }
         },
         methods: {
+            reloadPage(){
+                window.location.reload()
+            },
             relationx2: function (a, b) {
                 let eqTrue = a.status === b.status && a.status === this.accept;
                 let eqFalse = a.status === b.status && a.status === this.synonym;
@@ -99,7 +104,8 @@
                 return cond ? "Igual" : "Diferente"
             },
             toCSV: function () {
-                console.log(this.items)
+
+
                 let csv = Papa.unparse(this.items, {
                     quotes: true, //or array of booleans
                     quoteChar: '"',
@@ -127,110 +133,17 @@
                 })
             },
             load_FDB(obj) {
-                let fail = {
-                    "Nome Pesquisado": obj.name,
-                    "Nome Cientifico": '',
-                    "Status do Taxon": '',
-                    'Familia': '',
-                    "Sinonimos": '',
-                    "Forma de Vida": '',
-                    "Substrato": '',
-                    'Grupo Taxonomico ': '',
-                    "Origem": '',
-                    "Endemismo": '',
-                    "Distribuicao": '',
-                    "Possivel Distribuicao": '',
-                    "Dominios Fitogeografico": '',
-                    "Vegetacao": ''
-                }
-
-
-                return loadFDBOffline({
-                    name: obj.name
-                }).then((item) => {
-                    if (!item.entry_name) {
-                        let new_accept = fail
-                        if (this.header.length === 0) {
-                            this.header = Object.keys(new_accept)
-                        }
-                        return new_accept
-                    }
-                    let new_accept;
-                    let regExp = /\(([^)]+)\)/g;
-                    let regiao = ["Sul", "Sudeste", "Norte", "Nordeste", "CentroOeste"]
-                    let distribuicao = []
-                    let distribuicao2 = []
-                    regiao.forEach(i => {
-                        let txt1 = item.ConsultaPublicaUC["distribuicaoGeograficaCerteza" + i]
-                        let txt2 = item.ConsultaPublicaUC["distribuicaoGeograficaDuvida" + i]
-                        let matches1 = txt1.match(regExp);
-                        let matches2 = txt2.match(regExp);
-                        if (matches1) {
-                            distribuicao = distribuicao.concat(matches1[0].substring(1, matches1[0].length - 1).split(','))
-                        }
-                        if (matches2) {
-                            distribuicao2 = distribuicao2.concat(matches2[0].substring(1, matches2[0].length - 1).split(','))
-                        }
-                    })
-                    let synonym = item.accept["SINONIMO"].map(item => item["scientificname"]);
-                    let hierarchy = item.accept["higherclassification"].split(";")
-                    let name = item.entry_name + " [" + (item.synonym ? this.synonym : this.accept) + "]"
-                    new_accept = {
-                        "Nome Pesquisado": name,
-                        "Nome Cientifico": item.accept['scientificname'],
-                        "Status do Taxon": this.accept,
-                        'Familia': hierarchy[2].normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-                        "Sinonimos": synonym.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-                        "Forma de Vida": item.ConsultaPublicaUC["formaVida"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-                        "Substrato": item.ConsultaPublicaUC["substrato"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-                        'Grupo Taxonomico ': hierarchy[1].normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-                        "Origem": item.ConsultaPublicaUC["origem"] ? item.ConsultaPublicaUC["origem"].normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '',
-                        "Endemismo": item.ConsultaPublicaUC["endemismo"] ? item.ConsultaPublicaUC["endemismo"].normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '',
-                        "Distribuicao": distribuicao.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-                        "Possivel Distribuicao": distribuicao2.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-                        "Dominios Fitogeografico": item.ConsultaPublicaUC["dominioFitogeografico"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-                        "Vegetacao": item.ConsultaPublicaUC["tipoVegetacao"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                    }
-                    this.header = Object.keys(new_accept)
-                    return new_accept
-
-                })
+                return FDBget(obj.name).then(item => {
+                    this.header = Object.keys(item);
+                    return item
+                });
 
             },
             load_TPL(obj) {
-                let fail = {
-                    "Nome Pesquisado": obj.name,
-                    "Nome Cientifico": '',
-                    "Status do Taxon": '',
-                    'Familia': '',
-                    "Sinonimos": ''
-                }
-                return loadTPLOffline({
-                    name: obj.name
-                }).then((item) => {
-                    if (!item.entry_name) {
-                        let new_accept = fail
-                        if (this.header.length === 0 && 'TPL' !== this.site_b) {
-                            this.header = Object.keys(new_accept)
-                        }
-                        return new_accept
-                    } else {
-                        let name = item.entry_name + " [" + (item.synonym ? this.synonym : this.accept) + "]"
-                        let new_accept = {
-                            "Nome Pesquisado": name,
-                            "Nome Cientifico": item.accept['Genus'] + " " + item.accept['Species'] + " " + item.accept['Authorship'],
-                            "Status do Taxon": this.accept,
-                            "Familia": item.accept.Family,
-                            "Sinonimos": item.record.map(e => e.name).join(', ')
-                        };
-                        if ('TPL' !== this.site_b) {
-                            this.header = Object.keys(new_accept);
-                        }
-                        return new_accept
-                    }
+                return TPLget(obj.name).then(item => {
+                    this.header = Object.keys(item);
+                    return item
                 })
-
-
             },
             load_GBIF(obj) {
                 return loadGBIFOffline(obj).then((item) => {

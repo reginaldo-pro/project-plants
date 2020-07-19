@@ -4,6 +4,7 @@ import Entries from "../components/Entries";
 import Functions from "../components/Functions";
 import Relation from "../components/Relation";
 import BaseOnline from "../components/BaseOnline";
+import ocorrencias from "../components/ocorrencias";
 
 
 Vue.use(Router)
@@ -30,7 +31,11 @@ export default new Router({
       name: 'Relation',
       component: Relation
     },
-
+    {
+      path: '/:csv/ocorrencias',
+      name: 'Ocorrencias',
+      component: ocorrencias
+    },
     {
       path: '*',
       redirect: '/'

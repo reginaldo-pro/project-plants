@@ -6,7 +6,10 @@ import router from './router'
 import BootstrapVue from 'bootstrap-vue'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
+import moment from 'moment'
 
+Vue.prototype.moment = moment
+moment.locale('pt-BR');
 
 import VueFab from 'vue-float-action-button'
 import VueGraph from 'vue-graph/src/main'
@@ -23,7 +26,8 @@ Vue.config.productionTip = false
 if (!process.env.IS_WEB) Vue.use(require('vue-electron'))
 Vue.http = Vue.prototype.$http = axios
 Vue.config.productionTip = false
-
+const CancelToken = axios.CancelToken;
+const source = CancelToken.source();
 //
 Vue.use(VueGraph)
 /* eslint-disable no-new */

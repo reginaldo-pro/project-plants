@@ -26,7 +26,7 @@
                         <div class="pt5 nb5" v-if="item.completedSteps !== item.totalSteps">
 
                             <div :class="box_cls" :style="box_style">
-                                <div :class="label_cls" class="text-center">Loading data<strong></strong></div>
+                                <div :class="label_cls" class="text-center">Loading data <strong><a href="#" v-on:click.stop="reloadPage">Travou? clique para recarregar</a></strong></div>
                                 <progress-bar size="tiny" :val="(item.completedSteps/item.totalSteps )*100"
                                               :text="'Completo: '+ item.completedSteps +' de ' + item.totalSteps"/>
                             </div>
@@ -140,6 +140,15 @@
                 </tr>
                 </tbody>
             </table>
+
+            <hr/>
+            <h4> Baixar ocorrencias</h4>
+
+
+            <a href="#" v-on:click.stop="$router.push({name:'Ocorrencias', params:{csv: csv}})"> clique para iniciar a
+                busca
+                de ocorrencias</a>
+
         </div>
         <hr/>
 
@@ -251,6 +260,9 @@
             })
         },
         methods: {
+            reloadPage(){
+                window.location.reload()
+            },
             dataFormat: function (a, b) {
                 if (b) return Math.round((b / this.relation.values.reduce((a, b) => a + b, 0)) * 100) + "%";
                 return a;

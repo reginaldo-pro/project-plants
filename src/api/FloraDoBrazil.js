@@ -1,6 +1,7 @@
 import * as db from "../db";
 import axios from "axios";
 import most_accurate from '../classifying_input'
+import {language_Entry, language_FDB} from "../language/PTBR";
 
 const FDBInsertOrUpdate = async (entry_name, obj) => {
     return db.plantsFloraDoBrazil.findOne({entry_name: entry_name}).then(data => {
@@ -16,7 +17,7 @@ const FDBInsertOrUpdate = async (entry_name, obj) => {
     })
 };
 
-const _FDBSearch = async (entry_name2,entry_name, correction, synonym = null) => {
+const _FDBSearch = async (entry_name2, entry_name, correction, synonym = null) => {
     return new Promise((resolve, reject) => {
         try {
             if (entry_name) {
@@ -42,7 +43,7 @@ const _FDBSearch = async (entry_name2,entry_name, correction, synonym = null) =>
                                 resolve(null)
                             })
                         } else {
-                            _FDBSearch(entry_name2,data["NOME ACEITO"][0]["scientificname"], null, data).then(data => {
+                            _FDBSearch(entry_name2, data["NOME ACEITO"][0]["scientificname"], null, data).then(data => {
                                 resolve(data)
                             }).catch(e => {
                                 resolve(null)
@@ -66,7 +67,7 @@ const _FDBSearch = async (entry_name2,entry_name, correction, synonym = null) =>
                                 resolve(null)
                             })
                         } else {
-                            _FDBSearch(entry_name2,data["NOME ACEITO"][0]["scientificname"], null, data).then(data => {
+                            _FDBSearch(entry_name2, data["NOME ACEITO"][0]["scientificname"], null, data).then(data => {
                                 resolve(data)
                             }).catch(e => {
                                 resolve(null)
@@ -75,7 +76,7 @@ const _FDBSearch = async (entry_name2,entry_name, correction, synonym = null) =>
 
                     } else {
                         if (correction) {
-                            _FDBSearch(entry_name2,correction).then(data => {
+                            _FDBSearch(entry_name2, correction).then(data => {
                                 resolve(data)
                             }).catch(e => {
                                 resolve(null)
@@ -104,7 +105,7 @@ const FDBSearch = async (entry_name2, entry_name, correction = null, synonym = n
                 resolve(data)
             })
         } else {
-            return _FDBSearch(entry_name2,entry_name, correction, synonym).then(data => {
+            return _FDBSearch(entry_name2, entry_name, correction, synonym).then(data => {
                 if (data)
                     return FDBInsertOrUpdate(entry_name2, {...data, entry_name: entry_name2})
             })
@@ -112,7 +113,71 @@ const FDBSearch = async (entry_name2, entry_name, correction = null, synonym = n
     })
 };
 
+const FDBget = async (entry_name) => {
+    return new Promise(resolve => {
+        let new_accept = {
+            [language_Entry.search]: entry_name,
+            [language_Entry.scientific_name]: '',
+            [language_Entry.taxonomic_status]: '',
+            [language_Entry.scientific_name_authorship]: '',
+            [language_Entry.family]: '',
+            [language_Entry.synonym]: '',
+            [language_FDB.life_form]: '',
+            [language_FDB.substrate]: '',
+            [language_FDB.taxonomic_group]: '',
+            [language_FDB.source]: '',
+            [language_FDB.endemism]: '',
+            [language_FDB.distribution]: '',
+            [language_FDB.possible_distribution]: '',
+            [language_FDB.phytogeographic_domains]: '',
+            [language_FDB.vegetation]: ''
+        };
+        db.plantsFloraDoBrazil.findOne({entry_name: entry_name}).then(item => {
+            if (item) {
+                let regExp = /\(([^)]+)\)/g;
+                let regiao = ["Sul", "Sudeste", "Norte", "Nordeste", "CentroOeste"]
+                let distribuicao = []
+                let distribuicao2 = []
+                regiao.forEach(i => {
+                    let txt1 = item.ConsultaPublicaUC["distribuicaoGeograficaCerteza" + i]
+                    let txt2 = item.ConsultaPublicaUC["distribuicaoGeograficaDuvida" + i]
+                    let matches1 = txt1.match(regExp);
+                    let matches2 = txt2.match(regExp);
+                    if (matches1) {
+                        distribuicao = distribuicao.concat(matches1[0].substring(1, matches1[0].length - 1).split(','))
+                    }
+                    if (matches2) {
+                        distribuicao2 = distribuicao2.concat(matches2[0].substring(1, matches2[0].length - 1).split(','))
+                    }
+                });
+                new_accept[language_FDB.distribution] = distribuicao.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                new_accept[language_FDB.possible_distribution] = distribuicao2.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+                new_accept[language_Entry.synonym] = item.accept["SINONIMO"].map(item => item["scientificname"]).join(", ");
+
+                let hierarchy = item.accept["higherclassification"].split(";")
+                new_accept[language_FDB.taxonomic_group] = hierarchy[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                new_accept[language_Entry.family] = hierarchy[2].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                new_accept[language_Entry.scientific_name] = item.accept['genus'] + " " + item.accept['specificepithet'];
+                new_accept[language_Entry.scientific_name_authorship] = item.accept['scientificnameauthorship'];
+                new_accept[language_Entry.search] = new_accept[language_Entry.search]  + " ["+(item.synonym ? language_Entry.is_synonym : language_Entry.is_accept)+ "]";
+                new_accept[language_Entry.taxonomic_status] = language_Entry.is_accept;
+
+                new_accept[language_FDB.life_form] = item.ConsultaPublicaUC["formaVida"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                new_accept[language_FDB.substrate] = item.ConsultaPublicaUC["substrato"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                if (item.ConsultaPublicaUC["origem"])
+                    new_accept[language_FDB.source] = item.ConsultaPublicaUC["origem"].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                if (item.ConsultaPublicaUC["endemismo"])
+                    new_accept[language_FDB.endemism] = item.ConsultaPublicaUC["endemismo"].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+
+                new_accept[language_FDB.phytogeographic_domains] = item.ConsultaPublicaUC["dominioFitogeografico"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                new_accept[language_FDB.vegetation] = item.ConsultaPublicaUC["tipoVegetacao"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            }
+            resolve(new_accept)
+        })
+    })
+}
 export {
-    FDBSearch
+    FDBSearch, FDBget
 }

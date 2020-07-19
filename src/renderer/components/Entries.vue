@@ -13,14 +13,18 @@
             <thead>
             <tr>
                 <th scope="col">#</th>
-                <th scope="col" v-if="items" v-for="(item, index) in items[0]">{{index}}</th>
+                <th scope="col">Arquivo CSV</th>
+                <th scope="col">Ultima visualização</th>
+                <th scope="col">Apagar</th>
             </tr>
             </thead>
             <tbody>
             <tr v-for="(item, index) in items" :key="index" style="cursor:pointer;"
-                v-on:click.stop="go({name: 'Functions', params: {csv: item['fileName']}})">
+                v-on:click.stop="item.view()">
                 <th scope="row" class="pointer">{{ index }}</th>
-                <th scope="row" v-for="(item, index) in item" class="pointer">{{item}}</th>
+                <th scope="row" class="pointer">{{item.name}}</th>
+                <th scope="row" class="pointer">{{moment(item.updatedAt).calendar()}}</th>
+                <th scope="row" class="pointer"><a href="#" v-on:click.stop="item.remove()">{{item.removeText}}</a></th>
 
             </tr>
             </tbody>
@@ -35,7 +39,7 @@
     import vue2Dropzone from 'vue2-dropzone'
     import 'vue2-dropzone/dist/vue2Dropzone.min.css'
     import Papa from 'papaparse'
-    import {getCSV, insertOrUpdateCSV} from "../../api";
+    import {deleteCSV, getCSV, insertOrUpdateCSV} from "../../api";
     import {EntryInsertOrUpdate} from "../../api/Entry";
 
     export default {
@@ -44,6 +48,8 @@
             vueDropzone: vue2Dropzone
         },
         created() {
+            source.cancel('Operation canceled by the user.');
+
             this.loadFiles()
         },
         data() {
@@ -58,30 +64,29 @@
             }
         },
         methods: {
-            vfileSuccess: function (){
+            vfileSuccess: function () {
                 alert("Ok")
             },
             vfileAdded: function vfileAdded(files) {
 
-                try{
+                try {
                     new Promise(resolve => {
                         Papa.parse(files, {
                             download: true,
                             worker: true,
                             step: row => {
-                                try{
+                                try {
                                     if (row.data) {
                                         let entry = {name: row.data[0], fileName: files.name}
                                         EntryInsertOrUpdate(entry.name, entry)
                                     }
-                                }
-                                catch (e) {
+                                } catch (e) {
                                     alert("")
                                 }
                             },
                             complete: () => {
                                 try {
-                                    insertOrUpdateCSV({fileName: files.name}).then(()=>{
+                                    insertOrUpdateCSV({fileName: files.name}).then(() => {
                                         resolve(files.name)
                                     })
                                 } catch (e) {
@@ -90,12 +95,11 @@
                             }
 
                         })
-                    }).then(data =>{
+                    }).then(data => {
                         this.go({name: "Functions", params: {csv: data}})
                     })
 
-                }
-                catch (e) {
+                } catch (e) {
                     this.$router.go()
                 }
 
@@ -107,11 +111,39 @@
             loadFiles: function () {
 
                 try {
-                    getCSV({}).then((data) => {
-                        this.items = data
-                    })
-                }
-                catch (e) {
+                    setTimeout(()=>{
+                        getCSV({}).then((data) => {
+                            this.items = data.map((item) => {
+
+                                let ret = {
+                                    ...item,
+                                    removeText: "Apagar entrada"
+                                    ,
+                                    view: () => {
+                                        this.go({name: 'Functions', params: {csv: item['name']}})
+                                    }
+                                }
+                                ret.remove = () => {
+                                    ret.removeText = "Apagado aguarde ..."
+                                    deleteCSV(item).then(() => {
+                                        ret.removeText = "Apagado com sucesso!"
+                                    }).then(()=>{
+                                        let index = this.items.findIndex((element) => {
+                                            return element._id === item._id
+                                        })
+                                        this.items.splice(index, 1)
+                                    })
+
+                                }
+
+                                return ret
+                            })
+
+                            setTimeout(this.loadFiles, 1000)
+                        })
+                    }, 100)
+
+                } catch (e) {
                     alert("Explorer bloqueando aplicativo: sem acesso a pasta local")
                 }
             }

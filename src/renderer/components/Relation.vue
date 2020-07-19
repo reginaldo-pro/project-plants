@@ -11,7 +11,7 @@
         <div class="pt5 nb5" id="standard-sizes" v-if="completedSteps !== totalSteps">
 
             <div :class="box_cls" :style="box_style">
-                <div :class="label_cls" class="text-center">Loading data<strong></strong></div>
+                <div :class="label_cls" class="text-center">Loading data <strong><a href="#" v-on:click.stop="reloadPage">Travou? clique para recarregar</a></strong></div>
                 <progress-bar size="tiny" :val="(completedSteps/totalSteps )*100"
                               :text="'Completo: '+ completedSteps +' de ' + totalSteps"/>
             </div>
@@ -42,8 +42,8 @@
     import vue2Dropzone from "vue2-dropzone";
     import ProgressBar from "vue-simple-progress";
     import {getEntries, loadFDBOffline, loadGBIFOffline, loadTPLOffline} from "../../api";
-    import {loadCorrectionOffline} from "../../api/GBIF";
     import Papa from "papaparse";
+    import {getTPLxFDB} from "../../api/TPLxFDB";
 
     export default {
         name: "Relation",
@@ -89,6 +89,9 @@
             }
         },
         methods: {
+            reloadPage(){
+                window.location.reload()
+            },
             relationx2: function (a, b) {
                 let eqTrue = a.status === b.status && a.status === this.accept;
                 let eqFalse = a.status === b.status && a.status === this.synonym;
@@ -165,34 +168,11 @@
             loadPage(csv) {
                 getEntries({fileName: csv}).then(data => {
                     this.totalSteps = data.length;
-                    console.log(data)
+
                     data.forEach(entry => {
-                        loadCorrectionOffline({name: entry.name}).then(corrector => {
-                            let a = this["load_" + this.site_a]({
-                                name: entry.name,
-                                correction: corrector.correction['scientificName'],
-                            });
-
-                            let b = this["load_" + this.site_b]({
-                                name: entry.name,
-                                correction: corrector.correction['scientificName'],
-                            });
-
-                            a.then((SITE_A) => {
-                                b.then((SITE_B) => {
-
-                                    this.completedSteps += 1;
-                                    this.items.push({
-                                        "Nome Pesquisado": entry.name,
-                                        "Confidence": corrector.correction.confidence,
-                                        ['Taxon status ' + this.site_a]: SITE_A.status,
-                                        ['Nome aceito ' + this.site_a]: SITE_A.name,
-                                        ['Taxon status ' + this.site_b]: SITE_B.status,
-                                        ['Nome aceito ' + this.site_b]: SITE_B.name,
-                                        [this.site_a + ' x ' + this.site_b]: this.relationx2(SITE_A, SITE_B),
-                                    })
-                                })
-                            })
+                        getTPLxFDB(entry.name).then(item => {
+                            this.completedSteps += 1;
+                            this.items.push(item)
                         })
 
                     })

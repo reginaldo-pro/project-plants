@@ -12,6 +12,8 @@ const db = {
     csv: dbFactory('csv.db'),
     plantsFloraDoBrazil: dbFactory('plantsFloraDoBrazil.db'),
     plantsGBIF: dbFactory('plantsGBIF.db'),
+    ocorrenciasGBIF: dbFactory('ocorrenciasGBIF.db'),
+    ocorrenciasSPLINK: dbFactory('ocorrenciasSPLINK.db'),
     plantsTPL: dbFactory('plantsTPL.db'),
     correctorGBIF: dbFactory('correctorGBIF.db')
 };
