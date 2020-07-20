@@ -28,24 +28,24 @@ const deleteCSV = async (entry) => {
 
 // Flora
 const insertPlantsFloraDoBrazil = async (entry) => {
-    return await db.plantsFloraDoBrazil.insert(entry)
+    return await db.FDB.insert(entry)
 }
 const updatePlantsFloraDoBrazil = async (entry, newEntry) => {
-    return await db.plantsFloraDoBrazil.update(entry, newEntry)
+    return await db.FDB.update(entry, newEntry)
 }
 const getPlantsFloraDoBrazil = async (cond) => {
-    return await db.plantsFloraDoBrazil.find(cond)
+    return await db.FDB.find(cond)
 }
 
 // TPL
 const insertThePlantList = async (entry) => {
-    return await db.plantsTPL.insert(entry)
+    return await db.TPL.insert(entry)
 }
 const updateThePlantList = async (entry, newEntry) => {
-    return await db.plantsTPL.update(entry, newEntry)
+    return await db.TPL.update(entry, newEntry)
 }
 const getThePlantList = async (cond) => {
-    return await db.plantsTPL.find(cond)
+    return await db.TPL.find(cond)
 }
 // GBIF
 const insertPlantsGBIF = async (entry) => {

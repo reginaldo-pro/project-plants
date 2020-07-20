@@ -7,12 +7,12 @@ import {language_Entry} from "../language/PTBR";
 const JSSoup = require('jssoup').default;
 
 const TPLInsertOrUpdate = async (entry_name, obj) => {
-    return db.plantsTPL.findOne({entry_name: entry_name}).then(data => {
+    return db.TPL.findOne({entry_name: entry_name}).then(data => {
         if (!data) {
-            return db.plantsTPL.insert(obj)
+            return db.TPL.insert(obj)
         } else {
-            return db.plantsTPL.update({entry_name: entry_name}, obj).then(d => {
-                return db.plantsTPL.findOne({entry_name: entry_name}).then(data => {
+            return db.TPL.update({entry_name: entry_name}, obj).then(d => {
+                return db.TPL.findOne({entry_name: entry_name}).then(data => {
                     return data
                 })
             })
@@ -102,7 +102,7 @@ const _TPLSearch = async (entry_name2, entry_name, correction, synonym = null, f
 }
 
 const TPLSearch = async (entry_name2, entry_name, correction = null, synonym = null) => {
-    return db.plantsTPL.findOne({entry_name: entry_name2}).then(data => {
+    return db.TPL.findOne({entry_name: entry_name2}).then(data => {
         if (data) {
             return new Promise(resolve => {
                 resolve(data)
@@ -116,17 +116,19 @@ const TPLSearch = async (entry_name2, entry_name, correction = null, synonym = n
     })
 };
 
+const TPLfind = async (obj) => {
+    return db.TPL.findOne(obj)
+}
 const TPLget = async (entry_name) => {
     return new Promise(resolve => {
         let new_accept = {
-            [language_Entry.search]: entry_name,
             [language_Entry.scientific_name]: '',
             [language_Entry.taxonomic_status]: '',
             [language_Entry.scientific_name_authorship]: '',
             [language_Entry.family]: '',
             [language_Entry.synonym]: ''
         };
-        db.plantsTPL.findOne({entry_name: entry_name}).then(item => {
+        db.TPL.findOne({entry_name: entry_name}).then(item => {
             if (item) {
                 new_accept[language_Entry.synonym] = item.record.map(e => e.name).join(', ');
 
@@ -135,7 +137,7 @@ const TPLget = async (entry_name) => {
                 new_accept[language_Entry.scientific_name] = item.accept['Genus'] + " " + item.accept['Species'];
                 new_accept[language_Entry.scientific_name_authorship] = item.accept['Authorship'];
                 new_accept[language_Entry.search] = new_accept[language_Entry.search] + " [" + (item.synonym ? language_Entry.is_synonym : language_Entry.is_accept) + "]"
-                new_accept[language_Entry.taxonomic_status] = language_Entry.is_accept;
+                new_accept[language_Entry.taxonomic_status] = (item.synonym == null)? language_Entry.is_accept: language_Entry.is_synonym;
             }
             resolve(new_accept)
         })
@@ -143,5 +145,5 @@ const TPLget = async (entry_name) => {
 }
 
 export {
-    TPLSearch, TPLget
+    TPLSearch, TPLget, TPLfind
 }

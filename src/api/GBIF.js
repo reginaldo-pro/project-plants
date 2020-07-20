@@ -1,6 +1,7 @@
 // Corrector GBIF
 import axios from "axios";
 import * as db from "../db";
+import {cancelSource} from "./utils";
 
 const insertOC = async (item) => {
     return await db.ocorrenciasGBIF.insert(item)
@@ -50,7 +51,7 @@ const GBIFutils = (entry_name, array) => {
 
 const OccorrenceGBIFInsert = async (entry_name, usageKey, name) => {
 
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
         let day0 = new Date(1000, 1, 1, 0, 0).toJSON().slice(0, 10).replace(/-/g, '-')
 
         let today = new Date()
@@ -63,6 +64,8 @@ const OccorrenceGBIFInsert = async (entry_name, usageKey, name) => {
                         resolve(data)
                     })
 
+                }).catch((e) => {
+                    reject(e)
                 })
 
             } else {
@@ -75,6 +78,8 @@ const OccorrenceGBIFInsert = async (entry_name, usageKey, name) => {
                         resolve(local_data.concat(data))
                     })
 
+                }).catch((e) => {
+                    reject(e)
                 })
             }
         })
@@ -83,11 +88,12 @@ const OccorrenceGBIFInsert = async (entry_name, usageKey, name) => {
 // search
 
 const _download = (taxon_key, endOfRecords = false, offset = 0, dateFrom, dateTo) => {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
         if (endOfRecords === false && offset >= 0) {
             let url = "https://www.gbif.org/api/occurrence/search"
 
             axios.get(url, {
+                cancelToken: cancelSource.token,
                 params: {
                     advanced: false,
                     locale: 'en',
@@ -103,12 +109,14 @@ const _download = (taxon_key, endOfRecords = false, offset = 0, dateFrom, dateTo
                     let results = data['results'];
                     _download(taxon_key, data['endOfRecords'] ? data['endOfRecords'] : true, data['offset'] + 300).then(data => {
                         resolve(data.concat(results))
+                    }).catch((e) => {
+                        reject(e)
                     })
                 } else {
                     resolve([])
                 }
 
-            })
+            }).catch((e) => reject(e))
 
         } else {
             resolve([])
@@ -117,10 +125,10 @@ const _download = (taxon_key, endOfRecords = false, offset = 0, dateFrom, dateTo
 }
 
 const downloadOcorrenceGBIF = async (entry_name, usageKey) => {
-    return await new Promise(resolve => {
+    return await new Promise((resolve, reject) => {
         OccorrenceGBIFInsert(entry_name, usageKey, entry_name).then(data => {
             resolve(data)
-        })
+        }).catch(error => reject(error))
     })
 };
 

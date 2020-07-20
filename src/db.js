@@ -10,11 +10,13 @@ const dbFactory = (fileName) => DataStore.create({
 const db = {
     entry: dbFactory('entry.db'),
     csv: dbFactory('csv.db'),
-    plantsFloraDoBrazil: dbFactory('plantsFloraDoBrazil.db'),
+
+    FDB: dbFactory('FDB.db'),
+    TPL: dbFactory('TPL.db'),
+
     plantsGBIF: dbFactory('plantsGBIF.db'),
     ocorrenciasGBIF: dbFactory('ocorrenciasGBIF.db'),
     ocorrenciasSPLINK: dbFactory('ocorrenciasSPLINK.db'),
-    plantsTPL: dbFactory('plantsTPL.db'),
     correctorGBIF: dbFactory('correctorGBIF.db')
 };
 

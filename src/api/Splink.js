@@ -1,4 +1,5 @@
 import * as db from "../db";
+import {cancelSource} from "./utils";
 
 const insertOC = async (item) => {
     return await db.ocorrenciasSPLINK.insert(item)
@@ -54,7 +55,7 @@ const SPLINKUtils = (entry_name, array) => {
 
 const OccorrenceSPLINKInsert = async (entry_name) => {
 
-    return await new Promise(resolve => {
+    return await new Promise((resolve,reject) => {
 
         return db.ocorrenciasSPLINK.find({entry_name: entry_name}).then(local_data => {
 
@@ -64,7 +65,7 @@ const OccorrenceSPLINKInsert = async (entry_name) => {
                     resolve(local_data.concat(data))
                 })
 
-            })
+            }).catch(error => reject(error))
         })
     })
 };
@@ -73,7 +74,7 @@ const OccorrenceSPLINKInsert = async (entry_name) => {
 const _download = async (name, endOfRecords = false, offset = 0) => {
     let a = name.split(' ')
     name = a[0] + ' ' + a[1]
-    return await new Promise(resolve => {
+    return await new Promise((resolve,reject) => {
         if (endOfRecords === false && offset >= 0) {
             const chowdown = require('chowdown');
             let params = {
@@ -81,12 +82,11 @@ const _download = async (name, endOfRecords = false, offset = 0) => {
                 extra: " withcords ",
                 offset: offset
             }
-            console.log(params)
 
             let collection = chowdown('http://www.splink.org.br/mod_perl/searchHint?' + Object.keys(params).map(key => {
                 return key + "=" + params[key]
             }).join("&")
-            )
+            , {cancelToken: cancelSource.token})
 
             collection.collection('.record', {
                 name_0: '.tGa',
@@ -109,12 +109,12 @@ const _download = async (name, endOfRecords = false, offset = 0) => {
                     _download(name, !data['next'], offset + 100).then(data => {
                         data.shift();
                         resolve(data.concat(results))
-                    })
-                }).catch(() => {
-                    alert("limite de acesso atingido para o site SPLINK!!")
+                    }).catch(error => reject(e))
+                }).catch((e) => {
+                    reject(e)
                 })
 
-            })
+            }).catch(er=> reject(er))
 
         } else {
             resolve([])
@@ -123,10 +123,10 @@ const _download = async (name, endOfRecords = false, offset = 0) => {
 }
 
 const downloadOcorrenceSPLINK = async (entry_name) => {
-    return await new Promise(resolve => {
+    return await new Promise((resolve, reject) => {
         OccorrenceSPLINKInsert(entry_name).then(data => {
             resolve(data)
-        })
+        }).catch(error => reject(error))
     })
 };
 

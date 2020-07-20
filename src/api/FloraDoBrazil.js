@@ -2,14 +2,19 @@ import * as db from "../db";
 import axios from "axios";
 import most_accurate from '../classifying_input'
 import {language_Entry, language_FDB} from "../language/PTBR";
+import {cancelSource} from "./utils"
+
+const FDBfind = async (obj) => {
+    return db.FDB.findOne(obj)
+}
 
 const FDBInsertOrUpdate = async (entry_name, obj) => {
-    return db.plantsFloraDoBrazil.findOne({entry_name: entry_name}).then(data => {
+    return db.FDB.findOne({entry_name: entry_name}).then(data => {
         if (!data) {
-            return db.plantsFloraDoBrazil.insert(obj)
+            return db.FDB.insert(obj)
         } else {
-            return db.plantsFloraDoBrazil.update({entry_name: entry_name}, obj).then(d => {
-                return db.plantsFloraDoBrazil.findOne({entry_name: entry_name}).then(data => {
+            return db.FDB.update({entry_name: entry_name}, obj).then(d => {
+                return db.FDB.findOne({entry_name: entry_name}).then(data => {
                     return data
                 })
             })
@@ -26,12 +31,12 @@ const _FDBSearch = async (entry_name2, entry_name, correction, synonym = null) =
                 });
                 const consulta_taxon_fixa_publica = 'http://floradobrasil.jbrj.gov.br/reflora/listaBrasil/ConsultaPublicaUC/ResultadoDaConsultaCarregaTaxonGrupo.do?&idDadosListaBrasil='
 
-                consulta_taxon_name.get(entry_name).then(response => {
+                consulta_taxon_name.get(entry_name, {cancelToken: cancelSource.token}).then(response => {
                     let result = response.data.result;
                     if (result && result.length === 1) {
                         let data = result[0];
                         if (data["taxonomicstatus"] === "NOME_ACEITO") {
-                            axios.get(consulta_taxon_fixa_publica + data["taxonid"]).then(response => {
+                            axios.get(consulta_taxon_fixa_publica + data["taxonid"], {cancelToken: cancelSource.token}).then(response => {
                                 let obj = {
                                     entry_name: entry_name,
                                     accept: data,
@@ -55,7 +60,7 @@ const _FDBSearch = async (entry_name2, entry_name, correction, synonym = null) =
                         let data = result[index];
 
                         if (data["taxonomicstatus"] === "NOME_ACEITO") {
-                            axios.get(consulta_taxon_fixa_publica + data["taxonid"]).then(response => {
+                            axios.get(consulta_taxon_fixa_publica + data["taxonid"], {cancelToken: cancelSource.token}).then(response => {
                                 let obj = {
                                     entry_name: entry_name,
                                     accept: data,
@@ -99,7 +104,7 @@ const _FDBSearch = async (entry_name2, entry_name, correction, synonym = null) =
 }
 
 const FDBSearch = async (entry_name2, entry_name, correction = null, synonym = null) => {
-    return db.plantsFloraDoBrazil.findOne({entry_name: entry_name2}).then(data => {
+    return db.FDB.findOne({entry_name: entry_name2}).then(data => {
         if (data) {
             return new Promise(resolve => {
                 resolve(data)
@@ -116,7 +121,6 @@ const FDBSearch = async (entry_name2, entry_name, correction = null, synonym = n
 const FDBget = async (entry_name) => {
     return new Promise(resolve => {
         let new_accept = {
-            [language_Entry.search]: entry_name,
             [language_Entry.scientific_name]: '',
             [language_Entry.taxonomic_status]: '',
             [language_Entry.scientific_name_authorship]: '',
@@ -132,7 +136,7 @@ const FDBget = async (entry_name) => {
             [language_FDB.phytogeographic_domains]: '',
             [language_FDB.vegetation]: ''
         };
-        db.plantsFloraDoBrazil.findOne({entry_name: entry_name}).then(item => {
+        db.FDB.findOne({entry_name: entry_name}).then(item => {
             if (item) {
                 let regExp = /\(([^)]+)\)/g;
                 let regiao = ["Sul", "Sudeste", "Norte", "Nordeste", "CentroOeste"]
@@ -161,8 +165,8 @@ const FDBget = async (entry_name) => {
 
                 new_accept[language_Entry.scientific_name] = item.accept['genus'] + " " + item.accept['specificepithet'];
                 new_accept[language_Entry.scientific_name_authorship] = item.accept['scientificnameauthorship'];
-                new_accept[language_Entry.search] = new_accept[language_Entry.search]  + " ["+(item.synonym ? language_Entry.is_synonym : language_Entry.is_accept)+ "]";
-                new_accept[language_Entry.taxonomic_status] = language_Entry.is_accept;
+                new_accept[language_Entry.search] = new_accept[language_Entry.search] + " [" + (item.synonym ? language_Entry.is_synonym : language_Entry.is_accept) + "]";
+                new_accept[language_Entry.taxonomic_status] = (item.synonym == null)? language_Entry.is_accept: language_Entry.is_synonym;
 
                 new_accept[language_FDB.life_form] = item.ConsultaPublicaUC["formaVida"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                 new_accept[language_FDB.substrate] = item.ConsultaPublicaUC["substrato"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -179,5 +183,5 @@ const FDBget = async (entry_name) => {
     })
 }
 export {
-    FDBSearch, FDBget
+    FDBSearch, FDBget, FDBfind
 }
