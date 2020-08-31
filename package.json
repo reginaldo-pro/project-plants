@@ -1,6 +1,6 @@
 {
   "name": "pesquisadetaxon",
-  "version": "2.0.1",
+  "version": "3.0.1",
   "author": "Gabriel Choptian <choptian@alunos.utfpr.edu.br>",
   "description": "A Viewer of plants 2",
   "license": null,
@@ -20,7 +20,7 @@
     "unit": "karma start test/unit/karma.conf.js"
   },
   "build": {
-    "productName": "Plants Viewer - The Plant List - Flora do Brasil",
+    "productName": "Plants Viewer - Occorrencias GBIF e SPLINK",
     "appId": "plants",
     "directories": {
       "output": "build"
