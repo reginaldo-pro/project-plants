@@ -23,50 +23,59 @@ const insertOcorrenciasSPLINK = async (entry) => {
 }
 
 const SPLINKUtils = (entry_name, array) => {
-    return array.filter(e => e != null).map(item => {
+    let entries = array.
+        filter(e => e != null).map(item => {
+            ['name_0', 'name_1', 'name_2', 'family', 'coleta'].map(key => {
+                [6, 5, 4, 3, 2].map(sub => {
+                    let a = parseInt((item[key].length / sub))
+                    if (item[key].substring(0, a) === item[key].substring(a, a * 2))
+                        item[key] = item[key].substring(0, a)
+                })
 
-
-        ['name_0', 'name_1', 'name_2', 'family', 'coleta'].map(key => {
-            [6, 5, 4, 3, 2].map(sub => {
-                let a = parseInt((item[key].length / sub))
-                if (item[key].substring(0, a) === item[key].substring(a, a * 2))
-                    item[key] = item[key].substring(0, a)
             })
 
-        })
+            item['lat'] = item['lat'].substring(3, item['lat'].length)
+            item['long'] = item['long'].substring(4, item['long'].length)
 
-        item['lat'] = item['lat'].substring(3, item['lat'].length)
-        item['long'] = item['long'].substring(4, item['long'].length)
+            item['name_0'] = item['name_0'].trim() ? item['name_0'].trim() : item['name_s_0'].trim()
+            item['name_1'] = item['name_1'].trim() ? item['name_1'].trim() : item['name_s_1'].trim()
+            
+            return {
+                "entry_name": entry_name,
+                "base de dados": 'SPLINK',
+                'Nome cientifico sem autor': [...(new Set(item['name_0'].split(' ').concat(item['name_1'].split(' '))))].join(" "),
+                'Familia': [...(new Set(item['family'].split(' ')))].join(" "),
+                'pais': [...(new Set(item['pais'].split(' ')))].join(" "),
+                'year': item['coleta'].length === 10 ? item['coleta'].substring(6, 10) : item['coleta'],
+                'Month': item['coleta'].length === 10 ? item['coleta'].substring(3, 5) : item['coleta'],
+                'Day': item['coleta'].length === 10 ? item['coleta'].substring(0, 2) : '',
+                'Lat': item['lat'] ? parseFloat(String(item['lat']).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+                'long': item['long'] ? parseFloat(String(item['long']).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+            }
+        }).
+        filter(e => e['Lat']!="" && e['long']!="" && e['Nome cientifico sem autor']!="")
 
-        return {
-            "entry_name": entry_name,
-            "base de dados": 'SPLINK',
-            'Nome cientifico sem autor': [...(new Set(item['name_0'].split(' ').concat(item['name_1'].split(' '))))].join(" "),
-            'Familia': [...(new Set(item['family'].split(' ')))].join(" "),
-            'pais': [...(new Set(item['pais'].split(' ')))].join(" "),
-            'year': item['coleta'].length === 10 ? item['coleta'].substring(6, 10) : item['coleta'],
-            'Month': item['coleta'].length === 10 ? item['coleta'].substring(3, 5) : item['coleta'],
-            'Day': item['coleta'].length === 10 ? item['coleta'].substring(0, 2) : '',
-            'Lat': item['lat'] ? parseFloat(item['lat']).toFixed(2) : '',
-            'long': item['long'] ? parseFloat(item['long']).toFixed(2) : '',
-        }
-    })
+    const set = new Set(entries.map(item => JSON.stringify(item)));
+    const dedup = [...set].map(item => JSON.parse(item));
+
+    return dedup
 }
 
 const OccorrenceSPLINKInsert = async (entry_name) => {
 
     return await new Promise((resolve,reject) => {
-
-        return db.ocorrenciasSPLINK.find({entry_name: entry_name}).then(local_data => {
-
-            _download(entry_name, false, local_data.length).then(data => {
-                console.log(entry_name, SPLINKUtils(entry_name, data))
-                insertOcorrenciasSPLINK(SPLINKUtils(entry_name, data)).then((data) => {
-                    resolve(local_data.concat(data))
-                })
-
-            }).catch(error => reject(error))
-        })
+        return db.ocorrenciasSPLINK.find({entry_name: entry_name})
+            .then(local_data => {
+                    _download(entry_name, false, local_data.length)
+                        .then(data => {
+                            console.log(entry_name, SPLINKUtils(entry_name, data))
+                            insertOcorrenciasSPLINK(SPLINKUtils(entry_name, data))
+                                .then((data) => {
+                                    resolve(local_data.concat(data))
+                                })        
+                        })
+                        .catch(error => reject(error))
+            })
     })
 };
 // search
@@ -92,30 +101,31 @@ const _download = async (name, endOfRecords = false, offset = 0) => {
                 name_0: '.tGa',
                 name_1: '.tEa',
                 name_2: '.tA',
+                name_s_0: '.tGs',
+                name_s_1: '.tEs',
                 family: '.tF',
                 lat: '.lA',
                 coleta: '.tY',
                 pais: '.lC',
-                long: '.lO'
-            }).then(data => {
-                data.shift();
-                let results = data;
-                console.log(data)
-                collection.collection("#div_hint_summary", {
-                    req_0: 'll:nth-child(1)',
-                    offset: 'll:nth-child(2)',
-                    next: 'td:nth-child(4) img/title'
-                }).then(data => {
-                    _download(name, !data['next'], offset + 100).then(data => {
+                long: '.lO'})
+                    .then(data => {
                         data.shift();
-                        resolve(data.concat(results))
-                    }).catch(error => reject(e))
-                }).catch((e) => {
-                    reject(e)
-                })
-
-            }).catch(er=> reject(er))
-
+                        let results = data;
+                        console.log(data)
+                        collection.collection("#div_hint_summary", {
+                            req_0: 'll:nth-child(1)',
+                            offset: 'll:nth-child(2)',
+                            next: 'td:nth-child(4) img/title'})
+                                .then(data => {
+                                    _download(name, !data['next'], offset + 100)
+                                        .then(data => {
+                                            data.shift();
+                                            resolve(data.concat(results))
+                                        }).catch(error => reject(e))
+                                })
+                                .catch(e => reject(e))
+                    })
+                    .catch(er=> reject(er))
         } else {
             resolve([])
         }

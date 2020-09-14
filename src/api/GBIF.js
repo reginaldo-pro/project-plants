@@ -32,25 +32,32 @@ const insertCorrectorGBIF = async (entry) => {
 const getCorrectorGBIF = async (cond) => {
     return await db.correctorGBIF.find(cond)
 }
+
 const GBIFutils = (entry_name, array) => {
-    return array.filter(e => e != null).map(item => {
-        return {
-            "entry_name": entry_name,
-            "base de dados": 'GBIF',
-            'Nome cientifico sem autor': item['species'] ? item['species'] : '',
-            'Familia': item['family'] ? item['family'] : '',
-            'pais': item['countryCode'] ? item['countryCode'] : '',
-            'year': item['year'] ? item['year'] : '',
-            'Month': item['month'] ? item['month'] : '',
-            'Day': item['day'] ? item['day'] : '',
-            'Lat': item['decimalLatitude'] ? parseFloat(item['decimalLatitude']).toFixed(2) : '',
-            'long': item['decimalLongitude'] ? parseFloat(item['decimalLongitude']).toFixed(2) : '',
-        }
-    })
+    let entries = array.
+        filter(e => e != null).
+        map(item => {
+            return {
+                "entry_name": entry_name,
+                "base de dados": 'GBIF',
+                'Nome cientifico sem autor': item['species'] ? item['species'] : '',
+                'Familia': item['family'] ? item['family'] : '',
+                'pais': item['countryCode'] ? item['countryCode'] : '',
+                'year': item['year'] ? item['year'] : '',
+                'Month': item['month'] ? item['month'] : '',
+                'Day': item['day'] ? item['day'] : '',
+                'Lat': item['decimalLatitude'] ? parseFloat(String(item['decimalLatitude']).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+                'long': item['decimalLongitude'] ? parseFloat(String(item['decimalLongitude']).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+            }
+        }).
+        filter(e => e['Lat']!="" && e['long']!="")
+    const set = new Set(entries.map(item => JSON.stringify(item)));
+    const dedup = [...set].map(item => JSON.parse(item));
+
+    return dedup
 }
 
 const OccorrenceGBIFInsert = async (entry_name, usageKey, name) => {
-
     return new Promise((resolve, reject) => {
         let day0 = new Date(1000, 1, 1, 0, 0).toJSON().slice(0, 10).replace(/-/g, '-')
 
@@ -59,8 +66,8 @@ const OccorrenceGBIFInsert = async (entry_name, usageKey, name) => {
         return db.ocorrenciasGBIF.find({entry_name: name}).then(local_data => {
             if (local_data.length === 0) {
                 _download(usageKey, false, 0, day0, today).then(data => {
-
-                    insertOcorrenciasGBIF(GBIFutils(name, data)).then((data) => {
+                    let res = GBIFutils(name, data)
+                    insertOcorrenciasGBIF(res).then((data) => {
                         resolve(data)
                     })
 

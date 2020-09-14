@@ -195,7 +195,6 @@
                 this.items.forEach(item => {
                     item.totalSteps = totalSteps
                 })
-
                 data.forEach(entry => {
                     let bases = {
                         0: {name: "FDB", req: {}},

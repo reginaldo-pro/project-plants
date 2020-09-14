@@ -6,16 +6,17 @@ const insertEntry = async (entry) => {
     return await db.entry.insert(entry)
 }
 
-const getEntries = async (cond) => {
-    return await db.entry.find(cond)
+const getEntries = (cond) => {
+    return db.entry.find(cond)
 }
+
 // CSV
 const insertCSV = async (entry) => {
     return await db.csv.insert(entry)
 }
 
-const getCSV = async (cond) => {
-    return await db.csv.find(cond)
+const getCSV = (cond) => {
+    return db.csv.find(cond)
 }
 const updateCSV = async (entry, newEntry) => {
     return await db.csv.update(entry, newEntry)

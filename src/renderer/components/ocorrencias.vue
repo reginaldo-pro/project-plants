@@ -15,7 +15,7 @@
                                                                                     v-on:click.stop="reloadPage">Travou?
                     clique para recarregar</a></strong></div>
                 <progress-bar size="tiny" :val="(completedSteps/totalSteps )*100"
-                              :text="'Completo: '+ completedSteps +' de ' + totalSteps"/>
+                              :text="'Ocorrências válidas: ' + completedSteps + '. Ocorrências encontradas: ' + totalSteps + '.'"/>
             </div>
 
         </div>
@@ -154,7 +154,7 @@
                 return TPLget(obj.name)
             },
             loadPage(csv) {
-                getEntries({fileName: csv}).then(data => {
+                getEntries({fileName: csv}).then(data => {              
 
                     this.totalSteps = 0;
                     data.forEach(entry => {
@@ -192,7 +192,6 @@
                                 return items
                             }).then(items => {
                                 items.forEach(item => {
-
                                     loadCorrection({name: item.name}).then(data => {
                                         this.items[item.name] = []
                                         downloadOcorrenceGBIF(item.name, data['correction']['usageKey']).then(data => {

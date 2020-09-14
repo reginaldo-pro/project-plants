@@ -68,7 +68,6 @@
                 alert("Ok")
             },
             vfileAdded: function vfileAdded(files) {
-
                 try {
                     new Promise(resolve => {
                         Papa.parse(files, {
