@@ -39,7 +39,7 @@ const _TPLSearch = async (entry_name2, entry_name, correction, synonym = null, f
                         let index = most_accurate(result.map(item => {
                             return item['Genus'] + " " + item['Species'] + " " + item['Authorship']
                         }), entry_name2);
-
+                        
                         if (result.length > 0) {
                             let item = result[index];
 
@@ -48,14 +48,17 @@ const _TPLSearch = async (entry_name2, entry_name, correction, synonym = null, f
 
                                 axios.get(consulta_taxon_fixa_publica).then(response => {
                                     let soup = new JSSoup(response.data)
-                                    let record = soup.find('tbody').contents.map(item => {
+                                    let record = soup.find('tbody').contents.map(item => {                                     
+                                        var _last_one = item.contents[0].contents[0].contents[0].contents.length - 1
+                                        var _name = item.contents[0].getText(' ')                                        
+                                        var _author = item.contents[0].contents[0].contents[0].contents[_last_one].getText(' ')
+                                        _name = _name.replace(_author, "(" + _author.trim() + ")")
                                         return {
-                                            name: item.contents[0].getText(' '),
+                                            name: _name,
                                             status: item.contents[1].getText(' '),
                                             source: item.contents[3].getText(' '),
                                         }
                                     });
-
                                     let obj = {
                                         entry_name: entry_name,
                                         accept: item,
