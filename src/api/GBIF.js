@@ -1,5 +1,6 @@
 // Corrector GBIF
 import axios from "axios";
+import { trim } from "jquery";
 import * as db from "../db";
 import {cancelSource} from "./utils";
 
@@ -34,11 +35,36 @@ const getCorrectorGBIF = async (cond) => {
 }
 
 const GBIFutils = (entry_name, array) => {
+    let entry_name_without_author = entry_name.replace(/[(].*[)]/, '').trim()
+
     let entries = array.
-        filter(e => e != null).
-        map(item => {
+        filter(e => e != null)
+        .map(item => {
+            let author = item['scientificName'].split(item['genericName'] + " " + item['specificEpithet'])[1]
+            let res_entry_name = item['scientificName'].replace(author, "").trim()
+
+            if (author){
+                author = author.trim()
+                if (author.match("[A-Z]")){
+                    author = "(" + author.trim() + ")"
+                } 
+            } else {
+                author = ""
+            }
+
+            res_entry_name = res_entry_name.trim() + " " + author.trim()
+
+            if (!res_entry_name.includes(entry_name_without_author)){
+                if (!(item['acceptedScientificName'].includes(entry_name_without_author))){
+                    return
+                }
+            }
+            if (item['Lat']==="" || item['long']===""){
+                return
+            }
+
             return {
-                "entry_name": entry_name,
+                "entry_name": res_entry_name,
                 "base de dados": 'GBIF',
                 'Nome cientifico sem autor': item['species'] ? item['species'] : '',
                 'Familia': item['family'] ? item['family'] : '',
@@ -49,10 +75,13 @@ const GBIFutils = (entry_name, array) => {
                 'Lat': item['decimalLatitude'] ? parseFloat(String(item['decimalLatitude']).replace(/[^\d.-]/g, '')).toFixed(2) : '',
                 'long': item['decimalLongitude'] ? parseFloat(String(item['decimalLongitude']).replace(/[^\d.-]/g, '')).toFixed(2) : '',
             }
-        }).
-        filter(e => e['Lat']!="" && e['long']!="")
+        })
+        .filter(e => e !== undefined)
+
+
     const set = new Set(entries.map(item => JSON.stringify(item)));
     const dedup = [...set].map(item => JSON.parse(item));
+           
 
     return dedup
 }
@@ -64,31 +93,52 @@ const OccorrenceGBIFInsert = async (entry_name, usageKey, name) => {
         let today = new Date()
         today = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toJSON().slice(0, 10).replace(/-/g, '-');
         return db.ocorrenciasGBIF.find({entry_name: name}).then(local_data => {
+            var data_down = null
             if (local_data.length === 0) {
-                _download(usageKey, false, 0, day0, today).then(data => {
-                    let res = GBIFutils(name, data)
-                    insertOcorrenciasGBIF(res).then((data) => {
-                        resolve(data)
-                    })
-
-                }).catch((e) => {
-                    reject(e)
-                })
-
+                data_down = _download(usageKey, false, 0, day0, today)
             } else {
-                let last = local_data[local_data.length - 1].updatedAt
+                var last = local_data[local_data.length - 1].updatedAt
                 last = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).toJSON().slice(0, 10).replace(/-/g, '-');
-
-                _download(usageKey, false, 0, last, today).then(data => {
-                    let res = GBIFutils(name, data)
-                    insertOcorrenciasGBIF(res).then((data) => {
-                        resolve(local_data.concat(data))
-                    })
-
-                }).catch((e) => {
-                    reject(e)
-                })
+                data_down = _download(usageKey, false, 0, last, today)                
             }
+
+            data_down.then(data => {
+                let res = GBIFutils(name, data)
+                console.log(entry_name, res)
+                insertOcorrenciasGBIF(res).then((data) => {
+                    resolve(data)
+                })
+
+            }).catch((e) => {
+                reject(e)
+            })
+
+            
+
+            // if (local_data.length === 0) {
+            //     _download(usageKey, false, 0, day0, today).then(data => {
+            //         let res = GBIFutils(name, data)
+            //         insertOcorrenciasGBIF(res).then((data) => {
+            //             resolve(data)
+            //         })
+
+            //     }).catch((e) => {
+            //         reject(e)
+            //     })
+
+            // } else {
+            //     let last = local_data[local_data.length - 1].updatedAt
+            //     last = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).toJSON().slice(0, 10).replace(/-/g, '-');
+            //     _download(usageKey, false, 0, last, today).then(data => {
+            //         let res = GBIFutils(name, data)
+            //         insertOcorrenciasGBIF(res).then((data) => {
+            //             resolve(local_data.concat(data))
+            //         })
+
+            //     }).catch((e) => {
+            //         reject(e)
+            //     })
+            //}
         })
     })
 };

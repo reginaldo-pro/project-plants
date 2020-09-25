@@ -111,14 +111,21 @@ const FDBSearch = async (entry_name2, entry_name, correction = null, synonym = n
             })
         } else {
             return _FDBSearch(entry_name2, entry_name, correction, synonym).then(data => {
-                if (data)
+                if (data){
+                    data.accept.SINONIMO.map(e => 
+                        e['scientificname'] = e['scientificname'].replace(e['scientificnameauthorship'], "(" + e['scientificnameauthorship'] + ")")
+                    )  
+                    data.accept.scientificname =  data.accept.scientificname.replace(data.accept.scientificnameauthorship, "(" + data.accept.scientificnameauthorship + ")")
                     return FDBInsertOrUpdate(entry_name2, {...data, entry_name: entry_name2})
+                }
             })
         }
     })
 };
 
 const FDBget = async (entry_name) => {
+    if (entry_name==="")
+        return
     return new Promise(resolve => {
         let new_accept = {
             [language_Entry.scientific_name]: '',
@@ -145,6 +152,8 @@ const FDBget = async (entry_name) => {
                 regiao.forEach(i => {
                     let txt1 = item.ConsultaPublicaUC["distribuicaoGeograficaCerteza" + i]
                     let txt2 = item.ConsultaPublicaUC["distribuicaoGeograficaDuvida" + i]
+
+
                     let matches1 = txt1.match(regExp);
                     let matches2 = txt2.match(regExp);
                     if (matches1) {

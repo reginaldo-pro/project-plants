@@ -23,8 +23,11 @@ const insertOcorrenciasSPLINK = async (entry) => {
 }
 
 const SPLINKUtils = (entry_name, array) => {
-    let entries = array.
-        filter(e => e != null).map(item => {
+    let entry_name_without_author = entry_name.replace(/[(].*[)]/, '').trim()
+
+    let entries = array
+        .filter(e => e != null)
+        .map(item => {
             ['name_0', 'name_1', 'name_2', 'family', 'coleta'].map(key => {
                 [6, 5, 4, 3, 2].map(sub => {
                     let a = parseInt((item[key].length / sub))
@@ -39,11 +42,19 @@ const SPLINKUtils = (entry_name, array) => {
 
             item['name_0'] = item['name_0'].trim() ? item['name_0'].trim() : item['name_s_0'].trim()
             item['name_1'] = item['name_1'].trim() ? item['name_1'].trim() : item['name_s_1'].trim()
-            
+
+
+            let res_entry_name = [...(new Set(item['name_0'].split(' ').concat(item['name_1'].split(' ').concat("(" + item['name_2'].split(' ') + ")"))))].join(" ").replace(/ +(?= )/g,'')
+            res_entry_name = res_entry_name.replace(" ()", "")
+
+            if (!res_entry_name.includes(entry_name_without_author) || item['Lat']==="" || item['long']===""){
+                return
+            }
+
             return {
-                "entry_name": entry_name,
+                "entry_name": res_entry_name,
                 "base de dados": 'SPLINK',
-                'Nome cientifico sem autor': [...(new Set(item['name_0'].split(' ').concat(item['name_1'].split(' '))))].join(" "),
+                'Nome cientifico sem autor': [...(new Set(item['name_0'].split(' ').concat(item['name_1'].split(' '))))].join(" ").replace(/ +(?= )/g,''),
                 'Familia': [...(new Set(item['family'].split(' ')))].join(" "),
                 'pais': [...(new Set(item['pais'].split(' ')))].join(" "),
                 'year': item['coleta'].length === 10 ? item['coleta'].substring(6, 10) : item['coleta'],
@@ -52,9 +63,9 @@ const SPLINKUtils = (entry_name, array) => {
                 'Lat': item['lat'] ? parseFloat(String(item['lat']).replace(/[^\d.-]/g, '')).toFixed(2) : '',
                 'long': item['long'] ? parseFloat(String(item['long']).replace(/[^\d.-]/g, '')).toFixed(2) : '',
             }
-        }).
-        filter(e => e['Lat']!="" && e['long']!="" && e['Nome cientifico sem autor']!="")
-
+        })
+        .filter(e => e !== undefined)
+        
     const set = new Set(entries.map(item => JSON.stringify(item)));
     const dedup = [...set].map(item => JSON.parse(item));
 
@@ -68,8 +79,9 @@ const OccorrenceSPLINKInsert = async (entry_name) => {
             .then(local_data => {
                     _download(entry_name, false, local_data.length)
                         .then(data => {
-                            console.log(entry_name, SPLINKUtils(entry_name, data))
-                            insertOcorrenciasSPLINK(SPLINKUtils(entry_name, data))
+                            let res = SPLINKUtils(entry_name, data)
+                            console.log(entry_name, res)
+                            insertOcorrenciasSPLINK(res)
                                 .then((data) => {
                                     resolve(local_data.concat(data))
                                 })        
@@ -111,7 +123,6 @@ const _download = async (name, endOfRecords = false, offset = 0) => {
                     .then(data => {
                         data.shift();
                         let results = data;
-                        console.log(data)
                         collection.collection("#div_hint_summary", {
                             req_0: 'll:nth-child(1)',
                             offset: 'll:nth-child(2)',
