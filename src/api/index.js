@@ -7,7 +7,16 @@ const insertEntry = async (entry) => {
 }
 
 const getEntries = (cond) => {
-    return db.entry.find(cond)
+    let entries =  db.entry.find(cond)
+        .then(data => {
+            return data.filter(e => e.name !== '')
+        })
+        .catch(reject => {
+            console.log("Erro na busca no BD de espécies e sinoníminas já baixadas!")
+            console.log(reject)
+        })
+    
+    return entries 
 }
 
 // CSV

@@ -104,7 +104,6 @@ const OccorrenceGBIFInsert = async (entry_name, usageKey, name) => {
 
             data_down.then(data => {
                 let res = GBIFutils(name, data)
-                console.log(entry_name, res)
                 insertOcorrenciasGBIF(res).then((data) => {
                     resolve(data)
                 })

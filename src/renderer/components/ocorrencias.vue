@@ -111,8 +111,6 @@
                     return item
                 }).filter(item => item);
 
-                console.log(items)
-
                 let csv = Papa.unparse(items, {
                     quotes: true, //or array of booleans
                     quoteChar: '"',
@@ -155,46 +153,42 @@
             },
             loadPage(csv) {
                 getEntries({fileName: csv}).then(data => {              
-
                     this.totalSteps = 0;
                     data.forEach(entry => {
                         let a = this.load_FDB({
                             name: entry.name,
-                        });
+                        })
 
                         let b = this.load_TPL({
                             name: entry.name,
-                        });
+                        })
 
-                        a.then((SITE_A) => {
-                            b.then(SITE_B => {
-                                let items = []
-                                if (SITE_A[language_Entry.synonym]) {
-                                    let item = {name: SITE_A[language_Entry.scientific_name]}
-                                    items.push(item)
-                                    this.totalSteps += 2;
-                                    let syn = SITE_A[language_Entry.synonym].split(', ');
-                                    items = items.concat(syn.map(name => {
-                                        return {name: name, accept: ("[FDB] " + item.name)}
-                                    }));
-                                    this.totalSteps += syn.length * 2;
-                                }
-                                if (SITE_B[language_Entry.synonym]) {
-                                    let item = {name: SITE_B[language_Entry.scientific_name]}
-                                    items.push(item)
-                                    this.totalSteps += 2;
-                                    let syn = SITE_B[language_Entry.synonym].split(', ');
-                                    items = items.concat(syn.map(name => {
-                                        return {name: name, accept: ("[TPL] " + item.name)}
-                                    }));
-                                    this.totalSteps += syn.length * 2;
-                                }
-                                return items
-                            }).then(items => {
+                        Promise.all([a,b])
+                            .then(results => {
+                                let items = results
+                                    .map(e => {
+                                            let syns = e[language_Entry.synonym]    
+                                            if (syns) {
+                                                return e[language_Entry.synonym].split(', ').concat(e[language_Entry.scientific_name]) 
+                                            } 
+                                    })
+                                    .reduce((new_items, e) => {
+                                        if (e){
+                                            new_items.concat(e)
+                                        }
+                                        return new_items
+                                    })
+                                
+                                const set = new Set(items.map(item => JSON.stringify(item)));
+                                items = [...set].map(item => JSON.parse(item));
+                                
+                                this.totalSteps = items.length
+                                
                                 items.forEach(item => {
-                                    loadCorrection({name: item.name}).then(data => {
-                                        this.items[item.name] = []
-                                        downloadOcorrenceGBIF(item.name, data['correction']['usageKey']).then(data => {
+                                    loadCorrection({name: item}).then(data => {
+                                        debugger
+                                        this.items[item] = []
+                                        downloadOcorrenceGBIF(item, data['correction']['usageKey']).then(data => {
                                             this.totalSteps -= 1
                                             this.totalSteps += data.length
 
@@ -205,7 +199,7 @@
                                                         delete item2.updatedAt;
                                                         delete item2.createdAt;
                                                         item2.accept = item.accept
-                                                        this.items[item.name].push(item2)
+                                                        this.items[item].push(item2)
                                                         this.completedSteps += 1
                                                     })
                                                 } else {
@@ -213,7 +207,7 @@
                                                     delete item2.updatedAt;
                                                     delete item2.createdAt;
                                                     item2.accept = item.accept
-                                                    this.items[item.name].push(item2)
+                                                    this.items[item].push(item2)
                                                     this.completedSteps += 1
                                                 }
                                             })
@@ -223,7 +217,7 @@
 
                                         })
 
-                                        downloadOcorrenceSPLINK(item.name).then(data => {
+                                        downloadOcorrenceSPLINK(item).then(data => {
                                             this.totalSteps -= 1
                                             this.totalSteps += data.length
 
@@ -234,7 +228,7 @@
                                                         delete item2.updatedAt;
                                                         delete item2.createdAt;
                                                         item2.accept = item.accept
-                                                        this.items[item.name].push(item2)
+                                                        this.items[item].push(item2)
                                                         this.completedSteps += 1
                                                     })
                                                 } else {
@@ -242,7 +236,7 @@
                                                     delete item2.updatedAt;
                                                     delete item2.createdAt;
                                                     item2.accept = item.accept
-                                                    this.items[item.name].push(item2)
+                                                    this.items[item].push(item2)
                                                     this.completedSteps += 1
                                                 }
                                             })
@@ -252,13 +246,10 @@
                                     })
 
                                 })
+
                             })
-                        })
                     })
-
                 })
-
-
             }
         }
     }

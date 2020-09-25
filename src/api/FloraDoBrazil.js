@@ -124,8 +124,6 @@ const FDBSearch = async (entry_name2, entry_name, correction = null, synonym = n
 };
 
 const FDBget = async (entry_name) => {
-    if (entry_name==="")
-        return
     return new Promise(resolve => {
         let new_accept = {
             [language_Entry.scientific_name]: '',

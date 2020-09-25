@@ -274,7 +274,6 @@
             baixar(element) {
                 let data = {};
                 let name = `FDBxTPL '${this.csvInfo.file.originalName}'`;
-                console.log(element)
                 switch (element) {
                     case 0: { // Não encontrados Flora do Brasil
                         data = this.csvInfo.FDB.Erro.map(item => {
@@ -394,7 +393,6 @@
                     }
                 }
                 if (element !== 5) {
-
                     let csv = Papa.unparse(data, {
                         quotes: false, //or array of booleans
                         quoteChar: '"',
@@ -405,7 +403,7 @@
                         skipEmptyLines: false,
                         columns: null
                     });
-                    console.log(csv)
+
                     let hiddenElement = document.createElement('a');
                     hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
                     hiddenElement.target = '_blank';

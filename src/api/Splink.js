@@ -12,7 +12,6 @@ const insertOcorrenciasSPLINK = async (entry) => {
             return db.ocorrenciasSPLINK.findOne(item).then(found => {
                 if (found === null) {
                     return insertOC(item).then(item => {
-                        console.log("insert", item)
                         return item
                     })
                 }
@@ -73,14 +72,12 @@ const SPLINKUtils = (entry_name, array) => {
 }
 
 const OccorrenceSPLINKInsert = async (entry_name) => {
-
     return await new Promise((resolve,reject) => {
         return db.ocorrenciasSPLINK.find({entry_name: entry_name})
             .then(local_data => {
                     _download(entry_name, false, local_data.length)
                         .then(data => {
                             let res = SPLINKUtils(entry_name, data)
-                            console.log(entry_name, res)
                             insertOcorrenciasSPLINK(res)
                                 .then((data) => {
                                     resolve(local_data.concat(data))

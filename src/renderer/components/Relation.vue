@@ -100,7 +100,6 @@
                 return eqNone ? '' : cond ? "Igual" : "Diferente"
             },
             toCSV: function () {
-                console.log(this.items)
                 let csv = Papa.unparse(this.items, {
                     quotes: true, //or array of booleans
                     quoteChar: '"',

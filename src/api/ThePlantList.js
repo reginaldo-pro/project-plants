@@ -123,8 +123,6 @@ const TPLfind = async (obj) => {
     return db.TPL.findOne(obj)
 }
 const TPLget = async (entry_name) => {
-    if (entry_name==="")
-        return
     return new Promise(resolve => {
         let new_accept = {
             [language_Entry.scientific_name]: '',
