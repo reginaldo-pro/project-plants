@@ -112,8 +112,9 @@ const TPLSearch = async (entry_name2, entry_name, correction = null, synonym = n
             })
         } else {
             return _TPLSearch(entry_name2, entry_name, correction, synonym).then(data => {
-                if (data)
+                if (data){
                     return TPLInsertOrUpdate(entry_name2, {...data, entry_name: entry_name2})
+                }
             })
         }
     })

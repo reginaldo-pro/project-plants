@@ -227,7 +227,6 @@
 
                                 }
 
-
                                 bases[0].req.then((fdb) => {
                                     bases[1].req.then((tpl) => {
                                         let FDBxTPL = 0;
@@ -268,7 +267,6 @@
             },
             load_FDB(obj) {
                 return FDBSearch(obj.name, obj.correction, obj.correction2).then(item => {
-
                     if (item) {
                         return {
                             status: item.synonym ? this.synonym : (!item.synonym && !item.accept) ? "" : this.accept,
@@ -300,6 +298,7 @@
                 })
             },
             load_GBIF(obj) {
+                debugger
                 return loadGBIF(obj).then((item) => {
                     if (!item || !item.synonym && !item.accept) return {
                         status: "",

@@ -28,7 +28,7 @@
                 </thead>
                 <tbody>
                 <tr v-for="(item, index) in items" :key="index">
-                    <th scope="row">{{ index }}</th>
+                    <th scope="row">{{ index + 1 }}</th>
                     <th scope="row" v-for="(item2, index) in item" v-if="item">{{item2}}</th>
 
                 </tr>
@@ -161,41 +161,72 @@
             loadPage(csv) {
                 getEntries({fileName: csv}).then(data => {
                     this.totalSteps = data.length;
-                    data.forEach(entry => {
-                        let a = this["load_" + this.site_a]({
-                            name: entry.name,
-                        });
+                    
+                    if (this.site_a !== "None" && this.site_b !== "None"){
+                        data.forEach(entry => {
+                            let a = this["load_" + this.site_a]({
+                                name: entry.name,
+                            });
 
-                        let b = this["load_" + this.site_b]({
-                            name: entry.name,
-                        });
+                            let b = this["load_" + this.site_b]({
+                                name: entry.name,
+                            });
 
-                        a.then((SITE_A) => {
-                            b.then(SITE_B => {
-                                if (SITE_B === null) {
-                                    this.items.push(SITE_A)
-                                } else {
-                                    if (SITE_A["Status do Taxon"].includes("Nao encontrado")) {
-                                        if (SITE_B["Status do Taxon"].includes("Nao encontrado")) {
-                                            this.items.push({
-                                                "Nome Pesquisado": entry.name,
-                                                "Status do Taxon": "[" + this.site_a + "] [" + this.site_b + "] Nao encontrado"
-                                            })
-                                        } else {
-                                            this.items.push(SITE_B)
-                                        }
-                                    } else {
-                                        this.items.push(SITE_A)
-                                    }
+
+                            Promise.all([a,b]).then( results => {
+                                var [SITE_A, SITE_B] = results
+
+                                if ((!SITE_A || SITE_A['Status taxonômico'].includes('Nao encontrado') || SITE_A['Status taxonômico'] === '') && (!SITE_B || SITE_B['Status taxonômico'].includes('Nao encontrado') || SITE_B['Status taxonômico'] === '')) {
+                                    this.items.push({
+                                                    "Nome Pesquisado": entry.name,
+                                                    "Status taxonômico": "[" + this.site_a + "] [" + this.site_b + "] Nao encontrado"
+                                                })
+                                } else if (!SITE_A || SITE_A['Status taxonômico'].includes('Nao encontrado') || SITE_A['Status taxonômico'] === ''){
+                                    this.items.push({
+                                                    "Nome Pesquisado": entry.name,
+                                                    "Status taxonômico": "[" + this.site_a + "] Nao encontrado."
+                                                })
+                                } else if (!SITE_B || SITE_B['Status taxonômico'].includes('Nao encontrado') || SITE_B['Status taxonômico'] === ''){
+                                     this.items.push({
+                                                    "Nome Pesquisado": entry.name,
+                                                    "Status taxonômico": "[" + this.site_b + "] Nao encontrado."
+                                                })
                                 }
                                 this.completedSteps += 1;
+                            })                            
+                        })                       
+                    } else if (this.site_a !== "None"){
+                        data.forEach(entry => {
+                            let a = this["load_" + this.site_a]({name: entry.name});
+                            a.then((SITE_A) => {
+                                if (SITE_A['Status taxonômico'].includes('Nao encontrado') || SITE_A['Status taxonômico'] === ''){
+                                    this.items.push({
+                                                    "Nome Pesquisado": entry.name,
+                                                    "Status taxonômico": "[" + this.site_a + "] Nao encontrado."
+                                                })
+                                } else {
+                                    this.items.push(SITE_A)
+                                }
+                                this.completedSteps += 1;                                
                             })
                         })
-                    })
-
+                    } else if (this.site_b !== "None"){
+                        data.forEach(entry => {
+                            let b = this["load_" + this.site_b]({name: entry.name});
+                            a.then((SITE_B) => {
+                                if (SITE_B['Status taxonômico'].includes('Nao encontrado') || SITE_B['Status taxonômico'] === ''){
+                                    this.items.push({
+                                                    "Nome Pesquisado": entry.name,
+                                                    "Status taxonômico": "[" + this.site_b + "] Nao encontrado."
+                                                })
+                                } else {
+                                    this.items.push(SITE_B)
+                                }
+                                this.completedSteps += 1;                                
+                            })
+                        })
+                    }
                 })
-
-
             }
         }
     }
