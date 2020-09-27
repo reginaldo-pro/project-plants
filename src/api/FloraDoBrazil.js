@@ -112,9 +112,9 @@ const FDBSearch = async (entry_name2, entry_name, correction = null, synonym = n
         } else {
             return _FDBSearch(entry_name2, entry_name, correction, synonym).then(data => {
                 if (data){
-                    data.accept.SINONIMO.map(e => 
-                        e['scientificname'] = e['scientificname'].replace(e['scientificnameauthorship'], "(" + e['scientificnameauthorship'] + ")")
-                    )  
+                    data.accept.SINONIMO.map(e => {
+                        e['scientificname'] = e['scientificname'].replace(e['scientificnameauthorship'].trim(), "(" + e['scientificnameauthorship'].trim() + ")")
+                    })  
                     data.accept.scientificname =  data.accept.scientificname.replace(data.accept.scientificnameauthorship, "(" + data.accept.scientificnameauthorship + ")")
                     return FDBInsertOrUpdate(entry_name2, {...data, entry_name: entry_name2})
                 }

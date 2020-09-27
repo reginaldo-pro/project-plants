@@ -298,7 +298,6 @@
                 })
             },
             load_GBIF(obj) {
-                debugger
                 return loadGBIF(obj).then((item) => {
                     if (!item || !item.synonym && !item.accept) return {
                         status: "",
