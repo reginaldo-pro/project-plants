@@ -7,6 +7,10 @@ const insertEntry = async (entry) => {
 }
 
 const getEntries = (cond) => {
+    let ttt = db.entry.find({}).then(e => {
+        return e
+    })
+    
     let entries =  db.entry.find(cond)
         .then(data => {
             return data.filter(e => e.name !== '')
@@ -199,7 +203,6 @@ const loadGBIF = async (obj) => {
 }
 const insertOrUpdateCSV = async (obj) => {
     return new Promise(resolve => {
-
         return db.csv.findOne({name: obj.fileName}).then((data) => {
             if (!data) {
                 resolve(db.csv.insert({name: obj.fileName}))

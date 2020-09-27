@@ -160,7 +160,6 @@
             },
             loadPage(csv) {
                 getEntries({fileName: csv}).then(data => {
-
                     this.totalSteps = data.length;
                     data.forEach(entry => {
                         let a = this["load_" + this.site_a]({

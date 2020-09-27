@@ -70,29 +70,38 @@
             vfileAdded: function vfileAdded(files) {
                 try {
                     new Promise(resolve => {
+                        let sp_entries = []
                         Papa.parse(files, {
                             download: true,
                             worker: true,
                             step: row => {
                                 try {
                                     if (row.data) {
-                                        let entry = {name: row.data[0], fileName: files.name}
-                                        EntryInsertOrUpdate(entry.name, entry)
+                                        var entry = {name: row.data[0], fileName: files.name}
+                                        if (entry.name !== "") {
+                                            sp_entries.push(entry)                                            
+                                        }
                                     }
                                 } catch (e) {
-                                    alert("")
+                                    alert(e)
                                 }
                             },
                             complete: () => {
-                                try {
-                                    insertOrUpdateCSV({fileName: files.name}).then(() => {
-                                        resolve(files.name)
-                                    })
+                                try { 
+                                    let all_p = []     
+                                    sp_entries.forEach(e => {
+                                            all_p.push(EntryInsertOrUpdate(e.name, e))
+                                        }
+                                    )
+                                    Promise.all(all_p).then(()=>{
+                                        insertOrUpdateCSV({fileName: files.name}).then(() => {
+                                            resolve(files.name)
+                                        })
+                                    })        
                                 } catch (e) {
                                     alert(e)
                                 }
                             }
-
                         })
                     }).then(data => {
                         this.go({name: "Functions", params: {csv: data}})
@@ -108,12 +117,10 @@
                 this.$router.push(obj)
             },
             loadFiles: function () {
-
                 try {
                     setTimeout(()=>{
                         getCSV({}).then((data) => {
                             this.items = data.map((item) => {
-
                                 let ret = {
                                     ...item,
                                     removeText: "Apagar entrada"
