@@ -140,12 +140,19 @@ const _download = async (name, endOfRecords = false, offset = 0) => {
     })
 }
 
-const downloadOcorrenceSPLINK = async (entry_name) => {
-    return await new Promise((resolve, reject) => {
-        OccorrenceSPLINKInsert(entry_name).then(data => {
-            resolve(data)
-        }).catch(error => reject(error))
-    })
+const downloadOcorrenceSPLINK = (entry_name) => {
+    return  OccorrenceSPLINKInsert(entry_name)
+        .then(data => {        
+            return Promise.all(data)
+        })
+        .then(data => {          
+            return data
+        })
+        .catch(error => {
+            console.log("Erro no download do SPL para a espécie: " + entry_name)
+            console.log(error)
+            throw new Error("Erro no download do SPL para a espécie: " + entry_name)
+        })
 };
 
 export {

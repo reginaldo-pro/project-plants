@@ -84,6 +84,27 @@ const loadFDBOffline = async (obj) => {
     })
 }
 
+const allSettled = async (promiseList) => {
+    let results = new Array(promiseList.length);
+
+    return new Promise((ok, rej) => {
+        let fillAndCheck = function(i) {
+            return function(ret) {
+                results[i] = ret;
+                for(let j = 0; j < results.length; j++) {
+                    if (results[j] == null) return;
+                }
+                ok(results);
+            }
+        };
+
+        for(let i=0;i<promiseList.length;i++) {
+            promiseList[i].then(fillAndCheck(i), fillAndCheck(i));
+        }
+    });
+}
+
+
 const loadTPLOffline = async (obj) => {
     return new Promise(resolve => {
         try {
@@ -196,6 +217,7 @@ const insertOrUpdateCSV = async (obj) => {
 export {
     insertEntry,
     getEntries,
+    allSettled,
     getPlantsFloraDoBrazil,
     getPlantsGBIF,
     insertPlantsFloraDoBrazil,

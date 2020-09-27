@@ -78,11 +78,9 @@ const GBIFutils = (entry_name, array) => {
         })
         .filter(e => e !== undefined)
 
-
     const set = new Set(entries.map(item => JSON.stringify(item)));
     const dedup = [...set].map(item => JSON.parse(item));
            
-
     return dedup
 }
 
@@ -111,33 +109,6 @@ const OccorrenceGBIFInsert = async (entry_name, usageKey, name) => {
             }).catch((e) => {
                 reject(e)
             })
-
-            
-
-            // if (local_data.length === 0) {
-            //     _download(usageKey, false, 0, day0, today).then(data => {
-            //         let res = GBIFutils(name, data)
-            //         insertOcorrenciasGBIF(res).then((data) => {
-            //             resolve(data)
-            //         })
-
-            //     }).catch((e) => {
-            //         reject(e)
-            //     })
-
-            // } else {
-            //     let last = local_data[local_data.length - 1].updatedAt
-            //     last = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).toJSON().slice(0, 10).replace(/-/g, '-');
-            //     _download(usageKey, false, 0, last, today).then(data => {
-            //         let res = GBIFutils(name, data)
-            //         insertOcorrenciasGBIF(res).then((data) => {
-            //             resolve(local_data.concat(data))
-            //         })
-
-            //     }).catch((e) => {
-            //         reject(e)
-            //     })
-            //}
         })
     })
 };
@@ -180,12 +151,22 @@ const _download = (taxon_key, endOfRecords = false, offset = 0, dateFrom, dateTo
     })
 }
 
-const downloadOcorrenceGBIF = async (entry_name, usageKey) => {
-    return await new Promise((resolve, reject) => {
-        OccorrenceGBIFInsert(entry_name, usageKey, entry_name).then(data => {
-            resolve(data)
-        }).catch(error => reject(error))
-    })
+const downloadOcorrenceGBIF = (entry_name) => {
+    return loadCorrection({name: entry_name})
+        .then(data => { 
+            return OccorrenceGBIFInsert(entry_name, data['correction']['usageKey'], entry_name)
+                    .then(data => { 
+                        return Promise.all(data)
+                    })
+                    .then(data => {
+                        return data
+                    })
+                    .catch(error => {
+                        console.log("Erro no download do GBIF para a espécie: " + entry_name)
+                        console.log(error)
+                        throw new Error("Erro no download do GBIF para a espécie: " + entry_name)
+                    })
+        })
 };
 
 
