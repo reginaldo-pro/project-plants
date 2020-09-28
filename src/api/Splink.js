@@ -9,13 +9,22 @@ const insertOC = async (item) => {
 const insertOcorrenciasSPLINK = async (entry) => {
     return await new Promise(resolve => {
         resolve(entry.map(item => {
-            return db.ocorrenciasSPLINK.findOne(item).then(found => {
+            let key = {
+                entry_name: item.entry_name,
+                year: item.year,
+                Month: item.Month,
+                Day: item.Day,
+                long: item.long,
+                Lat: item.Lat
+            }
+            return db.ocorrenciasSPLINK.findOne(key).then(found => {            
                 if (found === null) {
                     return insertOC(item).then(item => {
                         return item
                     })
-                }
-                return found
+                } 
+                else
+                    return
             })
         }))
     })
@@ -80,7 +89,7 @@ const OccorrenceSPLINKInsert = async (entry_name) => {
                             let res = SPLINKUtils(entry_name, data)
                             insertOcorrenciasSPLINK(res)
                                 .then((data) => {
-                                    resolve(local_data.concat(data))
+                                        resolve(local_data.concat(data))
                                 })        
                         })
                         .catch(error => reject(error))
@@ -145,8 +154,8 @@ const downloadOcorrenceSPLINK = (entry_name) => {
         .then(data => {        
             return Promise.all(data)
         })
-        .then(data => {          
-            return data
+        .then(data => {  
+            return data.filter(e => e !== undefined)
         })
         .catch(error => {
             console.log("Erro no download do SPL para a espécie: " + entry_name)

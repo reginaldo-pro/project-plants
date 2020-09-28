@@ -12,7 +12,15 @@ const insertOC = async (item) => {
 const insertOcorrenciasGBIF = async (entry) => {
     return await new Promise(resolve => {
         resolve(entry.map(item => {
-            return db.ocorrenciasGBIF.findOne(item).then(found => {
+            let key = {
+                entry_name: item.entry_name,
+                year: item.year,
+                Month: item.Month,
+                Day: item.Day,
+                long: item.long,
+                Lat: item.Lat
+            }
+            return db.ocorrenciasGBIF.findOne(key).then(found => {
                 if (found === null) {
                     return insertOC(item).then(item => {
                         return item
@@ -159,7 +167,7 @@ const downloadOcorrenceGBIF = (entry_name) => {
                         return Promise.all(data)
                     })
                     .then(data => {
-                        return data
+                        return data.filter(e => e !== undefined)
                     })
                     .catch(error => {
                         console.log("Erro no download do GBIF para a espécie: " + entry_name)

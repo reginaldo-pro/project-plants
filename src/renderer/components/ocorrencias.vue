@@ -28,7 +28,7 @@
                 </thead>
                 <tbody>
                 <tr v-for="(item, index) in Object.keys(items)" v-if="items[item].length >0" :key="index">
-                    <th scope="row">{{ index }}</th>
+                    <th scope="row">{{ index + 1}}</th>
                     <th scope="row">{{ item }}</th>
                     <th scope="row">{{ items[item][0].accept }}</th>
                     <th scope="row">{{ items[item].length }}</th>
@@ -195,7 +195,7 @@
                                         this.spFeitas += 1
                                         results
                                             .filter(e => e !== undefined)
-                                            .forEach(res_ocur => {                                                
+                                            .forEach(res_ocur => {                                              
                                                 res_ocur.map(single_ocur => {                                              
                                                     this.occurFeitas += 1                                                        
                                                     delete single_ocur._id;
@@ -213,7 +213,7 @@
                                         this.mostrarAlerta = true
                                         console.log("Erro download de ocorrências!")
                                         console.log(error)
-                                    })                         
+                                    })                 
                             })                                                         
                         })                                                                   
                     })  
