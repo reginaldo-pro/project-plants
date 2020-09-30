@@ -108,10 +108,11 @@ const OccorrenceGBIFInsert = async (entry_name, usageKey, name) => {
                 data_down = _download(usageKey, false, 0, last, today)                
             }
 
-            data_down.then(data => {
-                let res = GBIFutils(name, data)
-                insertOcorrenciasGBIF(res).then((data) => {
-                    resolve(data)
+            data_down
+                .then(data => {
+                    let res = GBIFutils(name, data)
+                    insertOcorrenciasGBIF(res).then((data) => {
+                        resolve(data)
                 })
 
             }).catch((e) => {
@@ -167,7 +168,7 @@ const downloadOcorrenceGBIF = (entry_name) => {
                         return Promise.all(data)
                     })
                     .then(data => {
-                        return data.filter(e => e !== undefined)
+                        return Promise.resolve(data.filter(e => e !== undefined))
                     })
                     .catch(error => {
                         console.log("Erro no download do GBIF para a espécie: " + entry_name)

@@ -141,7 +141,8 @@ const FDBget = async (entry_name) => {
             [language_FDB.phytogeographic_domains]: '',
             [language_FDB.vegetation]: ''
         };
-        db.FDB.findOne({entry_name: entry_name}).then(item => {
+
+        db.FDB.findOne(entry_name).then(item => {
             if (item) {
                 let regExp = /\(([^)]+)\)/g;
                 let regiao = ["Sul", "Sudeste", "Norte", "Nordeste", "CentroOeste"]

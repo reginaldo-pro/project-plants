@@ -45,13 +45,11 @@
 <script>
     import vue2Dropzone from "vue2-dropzone";
     import ProgressBar from "vue-simple-progress";
-    import {getEntries, allSettled} from "../../api";
+    import {getEntries, getSpDown, sleep} from "../../api";
     import Papa from "papaparse";
-    import {FDBget} from "../../api/FloraDoBrazil";
-    import {TPLget} from "../../api/ThePlantList";
-    import {language_Entry} from "../../language/PTBR";
     import {downloadOcorrenceGBIF, loadCorrection} from "../../api/GBIF";
     import {downloadOcorrenceSPLINK} from "../../api/Splink";
+
 
     const NodeGeocoder = require('node-geocoder');
 
@@ -145,78 +143,47 @@
                 hiddenElement.download = "Ocorrencias '" + name + "'.csv";
                 hiddenElement.click();
             },
-            load_FDB(obj) {
-                return FDBget(obj.name)
-
-            },
-            load_TPL(obj) {
-                return TPLget(obj.name)
-            },
             loadPage(csv) {
                 getEntries({fileName: csv}).then(data => {              
                     this.spTotal = 0
                     this.spFeitas = 0
 
-                    data.forEach(entry => {
-                        let a = this.load_FDB({name: entry.name,})
-                        let b = this.load_TPL({name: entry.name,}) 
 
-                        Promise.all([a,b]).then(results => {
-                            let items = results
-                                .map(e => {
-                                        let syns = e[language_Entry.synonym]    
-                                        if (syns) {
-                                            return e[language_Entry.synonym].split(', ').concat(e[language_Entry.scientific_name]) 
-                                        } 
-                                })
-                                .reduce((new_items, e) => {
-                                    if (!new_items){
-                                        new_items = []
-                                    }
-                                    if (e){
-                                        new_items = new_items.concat(e)
-                                    }
-                                    return new_items
-                                })
-                                
-                            const set = new Set(items.map(item => JSON.stringify(item)));
-                            items = [...set].map(item => JSON.parse(item));
-                            
-                            this.spTotal += items.length
-                            items.forEach(item => {
-                                this.items[item] = []                                    
-
-                                let down_gbif = downloadOcorrenceGBIF(item)
-                                let down_spl = downloadOcorrenceSPLINK(item)
-
-                                Promise.all([down_gbif, down_spl])
-                                    .then(results => {  
-                                        this.statusProces = "Download de ocorrências de " + item + " realizado com sucesso!"
-                                        this.spFeitas += 1
-                                        results
-                                            .filter(e => e !== undefined)
-                                            .forEach(res_ocur => {                                              
-                                                res_ocur.map(single_ocur => {                                              
-                                                    this.occurFeitas += 1                                                        
-                                                    delete single_ocur._id;
-                                                    delete single_ocur.updatedAt;
-                                                    delete single_ocur.createdAt;
-                                                    single_ocur.accept = item.accept
-                                                    this.items[item].push(single_ocur)
-                                                })
+                    getSpDown(data)
+                        .then(sp_list => {
+                            this.spTotal = sp_list.length
+                            sp_list.reduce((accumulatorPromise, single_sp) =>{
+                                return accumulatorPromise
+                                    .then(() => {
+                                        this.items[single_sp] = []  
+                                        downloadOcorrenceGBIF(single_sp)
+                                            .then(results => {
+                                                this.statusProces = "Download de ocorrências de " + single_sp + " realizado com sucesso!"
+                                                results
+                                                    .filter(e => e !== undefined)
+                                                    .map(single_ocur => {                                            
+                                                            this.occurFeitas += 1                                                        
+                                                            delete single_ocur._id;
+                                                            delete single_ocur.updatedAt;
+                                                            delete single_ocur.createdAt;
+                                                            single_ocur.accept = single_sp
+                                                            this.items[single_sp].push(single_ocur)
+                                                    })                                                    
+                                                if (this.header.length === 0)
+                                                    this.header = ["Nome cientifico", "Nome aceito", "Numero de ocorrencias", "Baixar"];
                                             })
-                                        if (this.header.length === 0)
-                                            this.header = ["Nome cientifico", "Nome aceito", "Numero de ocorrencias", "Baixar"];
+                                            .catch(error => {
+                                                        this.spError.push(single_sp)
+                                                        this.mostrarAlerta = true
+                                                        console.log("Erro download de ocorrências!")
+                                                        console.log(error)
+                                                    }) 
+                                            .finally(() => {
+                                                this.spFeitas += 1
+                                            })
                                     })
-                                    .catch(error => {
-                                        this.spError.push(item)
-                                        this.mostrarAlerta = true
-                                        console.log("Erro download de ocorrências!")
-                                        console.log(error)
-                                    })                 
-                            })                                                         
-                        })                                                                   
-                    })  
+                            }, Promise.resolve())
+                    })                                    
                 })
             }
         }

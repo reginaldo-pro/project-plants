@@ -1,4 +1,7 @@
 import axios from "axios";
+import {FDBget} from "../api/FloraDoBrazil";
+import {TPLget} from "../api/ThePlantList";
+import {language_Entry} from "../language/PTBR";
 
 const db = require('../db')
 // Entry
@@ -87,27 +90,6 @@ const loadFDBOffline = async (obj) => {
         }
     })
 }
-
-const allSettled = async (promiseList) => {
-    let results = new Array(promiseList.length);
-
-    return new Promise((ok, rej) => {
-        let fillAndCheck = function(i) {
-            return function(ret) {
-                results[i] = ret;
-                for(let j = 0; j < results.length; j++) {
-                    if (results[j] == null) return;
-                }
-                ok(results);
-            }
-        };
-
-        for(let i=0;i<promiseList.length;i++) {
-            promiseList[i].then(fillAndCheck(i), fillAndCheck(i));
-        }
-    });
-}
-
 
 const loadTPLOffline = async (obj) => {
     return new Promise(resolve => {
@@ -217,10 +199,47 @@ const insertOrUpdateCSV = async (obj) => {
     })
 }
 
+const sleep = async (ms) => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
+const getSpDown = async (sps) => {
+    let all_down = []
+
+    sps.forEach(entry => {
+        all_down.push(FDBget({entry_name: entry.name}))
+        all_down.push(TPLget({entry_name: entry.name}))
+    })
+    return Promise.all(all_down).then(results => {
+        let items = results
+            .map(e => {
+                    let syns = e[language_Entry.synonym]    
+                    if (syns) {
+                        return e[language_Entry.synonym].split(', ').concat(e[language_Entry.scientific_name]) 
+                    } 
+            })
+            .reduce((new_items, e) => {
+                if (!new_items){
+                    new_items = []
+                }
+                if (e){
+                    new_items = new_items.concat(e)
+                }
+                return new_items
+            })
+            
+        const set = new Set(items.map(item => JSON.stringify(item)));
+        items = [...set].map(item => JSON.parse(item));
+
+        return items
+    })
+}
+
+
 export {
     insertEntry,
     getEntries,
-    allSettled,
     getPlantsFloraDoBrazil,
     getPlantsGBIF,
     insertPlantsFloraDoBrazil,
@@ -229,5 +248,6 @@ export {
     updatePlantsFloraDoBrazil,
     loadGBIF,
     insertCSV, getCSV, updateCSV, insertOrUpdateCSV,
-    loadFDBOffline, loadGBIFOffline, loadTPLOffline, deleteCSV
+    loadFDBOffline, loadGBIFOffline, loadTPLOffline, deleteCSV,
+    sleep, getSpDown
 }

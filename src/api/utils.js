@@ -18,6 +18,7 @@ export let cancelSource = cancelToken.source();
 export const refreshToken = (() => {
     cancelSource = cancelToken.source();
 });
+
 export const cancelAllRequests = (() => {
     cancelSource.cancel();
 });

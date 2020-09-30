@@ -132,7 +132,7 @@ const TPLget = async (entry_name) => {
             [language_Entry.family]: '',
             [language_Entry.synonym]: ''
         };
-        db.TPL.findOne({entry_name: entry_name}).then(item => {
+        db.TPL.findOne(entry_name).then(item => {
             if (item) {
                 new_accept[language_Entry.synonym] = item.record.map(e => e.name).join(', ');
 

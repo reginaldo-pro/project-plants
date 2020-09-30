@@ -1,5 +1,7 @@
 import * as db from "../db";
 import {cancelSource} from "./utils";
+import axios from "axios";
+import Papa from "papaparse";
 
 const insertOC = async (item) => {
     return await db.ocorrenciasSPLINK.insert(item)
@@ -84,7 +86,7 @@ const OccorrenceSPLINKInsert = async (entry_name) => {
     return await new Promise((resolve,reject) => {
         return db.ocorrenciasSPLINK.find({entry_name: entry_name})
             .then(local_data => {
-                    _download(entry_name, false, local_data.length)
+                    _download(entry_name) //_download(entry_name, false, local_data.length)
                         .then(data => {
                             let res = SPLINKUtils(entry_name, data)
                             insertOcorrenciasSPLINK(res)
@@ -92,13 +94,34 @@ const OccorrenceSPLINKInsert = async (entry_name) => {
                                         resolve(local_data.concat(data))
                                 })        
                         })
-                        .catch(error => reject(error))
+                        .catch(error => {
+                            reject(error)
+                        })
             })
     })
 };
 // search
 
-const _download = async (name, endOfRecords = false, offset = 0) => {
+const _download = async (name) => {
+    let a = name.split(' ')
+    name = a[0] + '%20' + a[1]
+
+    return await new Promise((resolve,reject) => {
+        axios.get(
+            'http://api.splink.org.br/records/ScientificName/' + name + '/Synonyms/flora2020'
+          ).then(response =>{
+              let res =  Papa.parse(response.data, {
+                  header: true
+              })
+              
+              resolve(res.data.filter(e => e.seq !== ''))
+          }).catch(er => {
+              reject(er)
+          })
+    })    
+}
+
+const __download = async (name, endOfRecords = false, offset = 0) => {
     let a = name.split(' ')
     name = a[0] + ' ' + a[1]
     return await new Promise((resolve,reject) => {
@@ -114,6 +137,7 @@ const _download = async (name, endOfRecords = false, offset = 0) => {
                 return key + "=" + params[key]
             }).join("&")
             , {cancelToken: cancelSource.token})
+
 
             collection.collection('.record', {
                 name_0: '.tGa',
