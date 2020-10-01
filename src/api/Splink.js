@@ -44,7 +44,7 @@ const insertOcorrenciasSPLINK = (entry) => {
 const SPLINKUtils = (entry_name, array) => {
     let entry_name_without_author = entry_name.replace(/[(].*[)]/, '').trim()
     let entries = array
-        .filter(e => e != null && e.decimalLatitude !== '' && e.decimalLongitude !== '' && e.scientificName.includes(entry_name_without_author))
+        .filter(e => e != null && String(e.decimalLatitude).trim() !== '' && String(e.decimalLongitude).trim() !== '' && e.scientificName.includes(entry_name_without_author))
         .map(e => {
             return {
                 "entry_name": e.scientificNameAuthorship !== '' ? e.scientificName + ' (' + e.scientificNameAuthorship + ')' : e.scientificName,
@@ -56,8 +56,8 @@ const SPLINKUtils = (entry_name, array) => {
                 'year': e.year,
                 'Month': e.month ,
                 'Day': e.day,
-                'Lat': parseFloat(e.decimalLatitude.replace(/[^\d.-]/g, '')).toFixed(2),
-                'long': parseFloat(e.decimalLongitude.replace(/[^\d.-]/g, '')).toFixed(2),
+                'Lat': parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2),
+                'long': parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2),
             }
         })      
 

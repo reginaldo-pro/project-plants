@@ -236,10 +236,10 @@
                                                 })
                                         })
                                 }, Promise.resolve())
-                        }) 
-                        .finally(() =>{
-                            this.statusProces = "Todas as ocorrências foram baixadas com sucesso!"
-                        })                                   
+                            }) 
+                            .finally(() =>{
+                                this.statusProces = "Todas as ocorrências foram baixadas com sucesso!"
+                            })                                   
                 })
             }
         }
