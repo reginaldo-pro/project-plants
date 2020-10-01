@@ -173,7 +173,7 @@
                             });
 
 
-                            Promise.all([a,b]).then( results => {
+                            Promise.all([a,b]).then(results => {
                                 var [SITE_A, SITE_B] = results
 
                                 if ((!SITE_A || SITE_A['Status taxonômico'].includes('Nao encontrado') || SITE_A['Status taxonômico'] === '') && (!SITE_B || SITE_B['Status taxonômico'].includes('Nao encontrado') || SITE_B['Status taxonômico'] === '')) {

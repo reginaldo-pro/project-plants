@@ -9,11 +9,7 @@ const insertEntry = async (entry) => {
     return await db.entry.insert(entry)
 }
 
-const getEntries = (cond) => {
-    let ttt = db.entry.find({}).then(e => {
-        return e
-    })
-    
+const getEntries = (cond) => {   
     let entries =  db.entry.find(cond)
         .then(data => {
             return data.filter(e => e.name !== '')
@@ -21,8 +17,7 @@ const getEntries = (cond) => {
         .catch(reject => {
             console.log("Erro na busca no BD de espécies e sinoníminas já baixadas!")
             console.log(reject)
-        })
-    
+        })    
     return entries 
 }
 

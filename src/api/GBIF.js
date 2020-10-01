@@ -8,6 +8,12 @@ const insertOC = async (item) => {
     return await db.ocorrenciasGBIF.insert(item)
 }
 
+const dropDBGBIF = async (item) => {
+    return await db.ocorrenciasGBIF.remove({ }, { multi: true }, function (err, numRemoved) {
+        db.ocorrenciasGBIF.loadDatabase();
+      });
+}
+
 
 const insertOcorrenciasGBIF = async (entry) => {
     return await new Promise(resolve => {
@@ -73,6 +79,7 @@ const GBIFutils = (entry_name, array) => {
 
             return {
                 "entry_name": res_entry_name,
+                "accept": entry_name_without_author,
                 "base de dados": 'GBIF',
                 'Nome cientifico sem autor': item['species'] ? item['species'] : '',
                 'Familia': item['family'] ? item['family'] : '',
@@ -239,5 +246,6 @@ const loadCorrectionOffline = async (obj) => {
 export {
     loadCorrection,
     loadCorrectionOffline,
-    downloadOcorrenceGBIF
+    downloadOcorrenceGBIF,
+    dropDBGBIF
 }
