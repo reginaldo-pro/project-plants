@@ -211,8 +211,15 @@ const getSpDown = async (sps) => {
             .map(e => {
                     let syns = e[language_Entry.synonym]    
                     if (syns) {
-                        return e[language_Entry.synonym].split(', ').concat(e[language_Entry.scientific_name]) 
-                    } 
+                        let res = e[language_Entry.synonym]
+                            .split(', ')
+                            .map(s => {
+                                return {entry_name:s, accepted_name:e[language_Entry.scientific_name] + ' ' + e[language_Entry.scientific_name_authorship]}
+                            })
+                            .concat({entry_name:e[language_Entry.scientific_name] + ' ' + e[language_Entry.scientific_name_authorship], accepted_name: e[language_Entry.scientific_name] + ' ' + e[language_Entry.scientific_name_authorship]})
+                        return res 
+                            
+                    }  
             })
             .reduce((new_items, e) => {
                 if (!new_items){
@@ -223,12 +230,40 @@ const getSpDown = async (sps) => {
                 }
                 return new_items
             })
-            
-        const set = new Set(items.map(item => JSON.stringify(item)));
-        items = [...set].map(item => JSON.parse(item));
 
+        const set = new Set(items.map(item => JSON.stringify(item)))
+        items = [...set].map(item => JSON.parse(item))
         return items
     })
+}
+
+const getSpeciesAndAuthor = (speciesStringName) => {
+    var clear_str = speciesStringName
+        .replace(/[{()}]/g, '')
+        .replace(/\s\s+/g, ' ')
+    var cap_words = clear_str.match(/(\b[A-Z][A-Za-z]+|\b[A-Z]\b)/g)
+    var author = ''
+    var species = ''
+    if (cap_words.length>1){
+        var part_of_author = clear_str
+            .split(cap_words[1])
+            .map(w => w.trim())
+            .filter(w => w !== '') 
+            .slice(1)
+            .join(' ')
+
+        species = clear_str
+            .split(cap_words[1])
+            .map(w => w.trim())
+            .filter(w => w !== '') 
+            .slice(0,1)
+
+        author = "(" + cap_words[1].trim() + part_of_author + ")"
+    } else {
+        species = clear_str.trim()
+    }
+    
+    return [species, author]
 }
 
 
@@ -244,5 +279,6 @@ export {
     loadGBIF,
     insertCSV, getCSV, updateCSV, insertOrUpdateCSV,
     loadFDBOffline, loadGBIFOffline, loadTPLOffline, deleteCSV,
-    sleep, getSpDown
+    sleep, getSpDown,
+    getSpeciesAndAuthor
 }

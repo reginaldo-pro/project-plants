@@ -3,6 +3,8 @@ import {cancelSource} from "./utils";
 import axios from "axios";
 import Papa from "papaparse";
 import e from "express";
+import { getSpeciesAndAuthor } from "./index";
+
 
 const insertOC = async (item) => {
     return await db.ocorrenciasSPLINK.insert(item)
@@ -19,12 +21,12 @@ const insertOcorrenciasSPLINK = (entry) => {
     let all_inserts = []
     entry.map(item => {
         let key = {
-            entry_name: item.entry_name,
+            found_name: item.found_name,
             year: item.year,
-            Month: item.Month,
-            Day: item.Day,
+            month: item.month,
+            day: item.day,
             long: item.long,
-            Lat: item.Lat
+            lat: item.lat
         }
         all_inserts.push(
             db.ocorrenciasSPLINK.findOne(key)
@@ -42,24 +44,32 @@ const insertOcorrenciasSPLINK = (entry) => {
 }
 
 const SPLINKUtils = (entry_name, array) => {
-    let entry_name_without_author = entry_name.replace(/[(].*[)]/, '').trim()
+    let entry_name_without_author = getSpeciesAndAuthor(entry_name.entry_name)[0] //entry_name.replace(/[(].*[)]/, '').trim()
     let entries = array
-        .filter(e => e != null && String(e.decimalLatitude).trim() !== '' && String(e.decimalLongitude).trim() !== '' && e.scientificName.includes(entry_name_without_author))
+        .filter(e => e != null)
         .map(e => {
-            return {
-                "entry_name": e.scientificNameAuthorship !== '' ? e.scientificName + ' (' + e.scientificNameAuthorship + ')' : e.scientificName,
-                "accept": entry_name_without_author,
+            let res_entry_name = getSpeciesAndAuthor(e.scientificName + ' (' + e.scientificNameAuthorship + ')').join(' ')
+
+            if (!res_entry_name.includes(entry_name_without_author)){
+                return
+            }
+            let res = {
+                "entry_name": getSpeciesAndAuthor(entry_name.entry_name).join(' '),
+                "found_name": res_entry_name,
+                "accepted_name": getSpeciesAndAuthor(entry_name.accepted_name).join(' '),
                 "base de dados": 'SPLINK',
-                'Nome cientifico sem autor': e.scientificName,
-                'Familia': e.family,
+                'familia': e.family,
                 'pais': e.country,
                 'year': e.year,
-                'Month': e.month ,
-                'Day': e.day,
-                'Lat': parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2),
-                'long': parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2),
+                'month': e.month ,
+                'day': e.day,
+                'lat': String(e.decimalLatitude).trim() !== '' ? parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+                'long': String(e.decimalLongitude).trim() !== '' ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
             }
-        })      
+            return res
+        })    
+        .filter(e => e !== undefined)
+        .filter(e => e['lat']!=="" || e['long']!=="")  
 
     const set = new Set(entries.map(item => JSON.stringify(item)));
     const dedup = [...set].map(item => JSON.parse(item));
@@ -70,18 +80,17 @@ const OccorrenceSPLINKInsert = (multi_entry_names) => {
     return new Promise((resolve,reject) => {
         let all_find = []
         multi_entry_names.forEach(entry_name => {
-            all_find.push(db.ocorrenciasSPLINK.find({entry_name: entry_name}))
+            all_find.push(db.ocorrenciasSPLINK.find({entry_name: entry_name.entry_name}))
         })
 
         Promise.all(all_find)
             .then(ocor_locais => {   
                 ocor_locais = ocor_locais.filter(e => e.length > 0)       
                 let names  = multi_entry_names.map(e =>{
-                    return (e.split('(')[0]).trim()
+                    return (getSpeciesAndAuthor(e.entry_name)[0])
                 })
                 let all_sp = []
                 let all_sp_names = []       
-
                 _download(encodeURI(names.join("/")))
                     .then(data => {
                         for (var sp_name of multi_entry_names) {
@@ -117,58 +126,6 @@ const _download = async (sp_names) => {
               reject(er)
           })
     })    
-}
-
-const __download = async (name, endOfRecords = false, offset = 0) => {
-    let a = name.split(' ')
-    name = a[0] + ' ' + a[1]
-    return await new Promise((resolve,reject) => {
-        if (endOfRecords === false && offset >= 0) {
-            const chowdown = require('chowdown');
-            let params = {
-                ts_genus: name,
-                extra: " withcords ",
-                offset: offset
-            }
-
-            let collection = chowdown('http://www.splink.org.br/mod_perl/searchHint?' + Object.keys(params).map(key => {
-                return key + "=" + params[key]
-            }).join("&")
-            , {cancelToken: cancelSource.token})
-
-
-            collection.collection('.record', {
-                name_0: '.tGa',
-                name_1: '.tEa',
-                name_2: '.tA',
-                name_s_0: '.tGs',
-                name_s_1: '.tEs',
-                family: '.tF',
-                lat: '.lA',
-                coleta: '.tY',
-                pais: '.lC',
-                long: '.lO'})
-                    .then(data => {
-                        data.shift();
-                        let results = data;
-                        collection.collection("#div_hint_summary", {
-                            req_0: 'll:nth-child(1)',
-                            offset: 'll:nth-child(2)',
-                            next: 'td:nth-child(4) img/title'})
-                                .then(data => {
-                                    _download(name, !data['next'], offset + 100)
-                                        .then(data => {
-                                            data.shift();
-                                            resolve(data.concat(results))
-                                        }).catch(error => reject(e))
-                                })
-                                .catch(e => reject(e))
-                    })
-                    .catch(er=> reject(er))
-        } else {
-            resolve([])
-        }
-    })
 }
 
 const downloadOcorrenceSPLINK = (multi_entry_names) => {

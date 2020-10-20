@@ -29,8 +29,9 @@
                 <tbody>
                 <tr v-for="(item, index) in Object.keys(items)" v-if="items[item].length >0" :key="index">
                     <th scope="row">{{ index + 1}}</th>
+                    <th scope="row">{{ items[item][0].entry_name }}</th>
                     <th scope="row">{{ item }}</th>
-                    <th scope="row">{{ items[item][0].accept }}</th>
+                    <th scope="row">{{ items[item][0].accepted_name }}</th>
                     <th scope="row">{{ items[item].length }}</th>
                     <th scope="row"><a href="#" v-on:click.stop="toCSV(item)">Baixar apenas este</a></th>
 
@@ -159,21 +160,20 @@
                         this.spTotal = 0
                         this.spFeitas = 0
 
-
                         getSpDown(data)
                             .then(sp_list => {
                                 if (this.header.length === 0)
-                                    this.header = ["Nome cientifico", "Nome aceito", "Numero de ocorrencias", "Baixar"];
+                                    this.header = ["Nome procurado", "Nome encontrado", "Nome aceito", "Numero de ocorrencias", "Baixar"];
                                 this.spTotal = sp_list.length * 2
 
-                                sp_list.reduce((accumulatorPromise, single_sp) =>{
+                                let down_gbif =  sp_list.reduce((accumulatorPromise, single_sp) =>{
                                     return accumulatorPromise
                                         .then(() => {
                                             return sleep(1000)
-                                                .then(
-                                                    downloadOcorrenceGBIF(single_sp)                                             
+                                                .then(() => {
+                                                    return downloadOcorrenceGBIF(single_sp)                                             
                                                         .then(results => {
-                                                            this.statusProces = "Download de ocorrências de " + single_sp + " no GBIF realizado com sucesso!"
+                                                            this.statusProces = "Download de ocorrências de " + single_sp.entry_name + " no GBIF realizado com sucesso!"
                                                             results
                                                                 .filter(e => e !== undefined)
                                                                 .map(single_ocur => {                                            
@@ -181,40 +181,44 @@
                                                                         delete single_ocur._id;
                                                                         delete single_ocur.updatedAt;
                                                                         delete single_ocur.createdAt;
-                                                                        if (this.items[single_ocur.accept] === undefined){
-                                                                            this.items[single_ocur.accept] = []                                         } 
-                                                                        this.items[single_ocur.accept].push(single_ocur)
-                                                                })                                                    
+                                                                        if (this.items[single_ocur.found_name] === undefined){
+                                                                            this.items[single_ocur.found_name] = []                                         
+                                                                        } 
+                                                                        this.items[single_ocur.found_name].push(single_ocur)
+                                                                })   
+                                                            return Promise.resolve(true)                                                     
                                                         })
                                                         .catch(error => {
                                                                     this.spError.push(single_sp)
                                                                     this.mostrarAlerta = true
                                                                     console.log("Erro download de ocorrências!")
                                                                     console.log(error)
+                                                                    return Promise.resolve(false)    
                                                                 }) 
                                                         .finally(() => {
                                                             this.spFeitas += 1
                                                         })
-                                                )
+                                                })
                                         })
                                 }, Promise.resolve())
                                 
+                               
                                 let new_sp_list = []                            
                                 for (var i = 0; i<sp_list.length; i+=10){
                                     new_sp_list[i/10] = sp_list.slice(i, (i+10))
                                 }
 
-                                new_sp_list.reduce((accumulatorPromise, multiple_sp) =>{
+                                let down_spl = new_sp_list.reduce((accumulatorPromise, multiple_sp) => {
                                     return accumulatorPromise
                                         .then(() => {
                                             multiple_sp.forEach(single_sp => {
-                                                if (this.items[single_sp] === undefined){
-                                                    this.items[single_sp] = [] 
+                                                if (this.items[single_sp.entry_name] === undefined){
+                                                    this.items[single_sp.entry_name] = [] 
                                                 }
                                             }); 
-                                            return sleep(2000)
-                                                .then(
-                                                    downloadOcorrenceSPLINK(multiple_sp)
+                                            return sleep(5000)
+                                                .then(() => {
+                                                    return downloadOcorrenceSPLINK(multiple_sp)
                                                         .then(results => {
                                                             this.statusProces = "Download de ocorrências de " + multiple_sp.length + " éspécies no SpLink realizado com sucesso!"
                                                             results.forEach(ocor_sp =>{
@@ -223,27 +227,35 @@
                                                                         delete single_ocur._id;
                                                                         delete single_ocur.updatedAt;
                                                                         delete single_ocur.createdAt;
-                                                                        if (this.items[single_ocur.accept] === undefined){
-                                                                            this.items[single_ocur.accept] = []                                         } 
-                                                                        this.items[single_ocur.accept].push(single_ocur)
+                                                                        if (this.items[single_ocur.found_name] === undefined){
+                                                                            this.items[single_ocur.found_name] = []                                         } 
+                                                                        this.items[single_ocur.found_name].push(single_ocur)
                                                                     }) 
-                                                                })                                                    
+                                                                })
+                                                            return Promise.resolve(true)                                                    
                                                         })                                               
                                                         .catch(error => {
                                                                     this.spError = this.spError.concat(multiple_sp)
                                                                     this.mostrarAlerta = true
                                                                     console.log("Erro download de ocorrências!")
                                                                     console.log(error)
+                                                                    return Promise.reject(false)
                                                                 }) 
                                                         .finally(() => {
                                                             this.spFeitas += multiple_sp.length
                                                         })
-                                                )
+                                                })                                                
                                         })
                                 }, Promise.resolve())
-                            }) 
-                            .finally(() =>{
-                                this.statusProces = "Todas as ocorrências foram baixadas com sucesso!"
+
+                                Promise.all([down_gbif, down_spl])
+                                    .then(e => {
+                                        if (e){
+                                            this.statusProces = "Todas as ocorrências foram baixadas com sucesso!"
+                                        } else {
+                                            this.statusProces = "Problemas no download!"
+                                        }
+                                    })
                             })                                   
                 })
             }
