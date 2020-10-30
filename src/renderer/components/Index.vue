@@ -317,7 +317,6 @@
                     }
                     case 5: {// Baixar ocorrencias
                         if (this.occorrenceStatus !== OCCORRENCE) {
-
                             this.occorrenceStatus = OCCORRENCE
                             this.occorrence.all.forEach(item => {
                                 this.occorrence.Process.push(item)
