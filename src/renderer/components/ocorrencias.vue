@@ -145,16 +145,6 @@
                 hiddenElement.click();
             },
             loadPage(csv) {
-
-                (async () => {
-                    await dropDBGBIF()
-                    await dropSpLDB()
-                })().catch(e => {
-                    console.log("Erro drop ocorrências!")
-                    console.log(e)
-                });
-                
-                
                 getEntries({fileName: csv})
                     .then(data => {              
                         this.spTotal = 0

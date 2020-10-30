@@ -25,9 +25,7 @@ const _TPLSearch = async (entry_name2, entry_name, correction, synonym = null, f
     return new Promise((resolve, reject) => {
         try {
             if (entry_name) {
-
                 const consulta_taxon_name = "http://www.theplantlist.org/tpl1.1/search?q=" + entry_name + "&csv=true"
-
 
                 axios.get(consulta_taxon_name)
                     .then(response => {

@@ -9,12 +9,6 @@ const insertOC = async (item) => {
     return await db.ocorrenciasGBIF.insert(item)
 }
 
-const dropDBGBIF = async (item) => {
-    return await db.ocorrenciasGBIF.remove({ }, { multi: true }, function (err, numRemoved) {
-        db.ocorrenciasGBIF.loadDatabase();
-      });
-}
-
 
 const insertOcorrenciasGBIF = async (entry) => {
     return await new Promise(resolve => {
@@ -49,7 +43,7 @@ const getCorrectorGBIF = async (cond) => {
     return await db.correctorGBIF.find(cond)
 }
 
-const GBIFutils = (entry_name, array) => {
+const GBIFutils = (entry_name, usageKey, array) => {
     let entry_name_without_author = getSpeciesAndAuthor(entry_name.entry_name)[0] //entry_name.replace(/[(].*[)]/, '').trim()
     let entries = array
         .filter(e => e != null)
@@ -72,6 +66,7 @@ const GBIFutils = (entry_name, array) => {
                 'day': e.day ? e.day : '',
                 'lat': String(e.decimalLatitude).trim() !== '' ? parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
                 'long': String(e.decimalLongitude).trim() !== '' ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+                'usageKey': usageKey
             }
             return res
         })
@@ -85,17 +80,28 @@ const GBIFutils = (entry_name, array) => {
 
 const OccorrenceGBIFInsert = async (entry_name, usageKey) => {
     return new Promise((resolve, reject) => {   
-        var data_down = _download(usageKey, 0)           
-        data_down
-            .then(data => {
-                let res = GBIFutils(entry_name, data)    
-                insertOcorrenciasGBIF(res).then((data) => {
-                    resolve(data)
+        db.ocorrenciasGBIF.find({usageKey: usageKey})
+            .then(found => {
+                if (found.length>0){
+                    resolve(found)
+                }
+                else {
+                    var data_down = _download(usageKey, 0)           
+                    data_down
+                        .then(data => {
+                            console.log(entry_name)
+                            console.log("----")
+                            let res = GBIFutils(entry_name, usageKey, data)    
+                            insertOcorrenciasGBIF(res)
+                                .then((data) => {
+                                    resolve(data)
+                                })
+                            })
+                }
             })
-
-        }).catch((e) => {
-            reject(e)
-        })
+            .catch((e) => {
+                reject(e)
+            })
     })
 }
 
@@ -120,7 +126,8 @@ const _download = (taxon_key, offset = 0) => {
                     let results = data['results']
                     let finished = data['endOfRecords']  
                     
-                     
+                    console.log("[GBIF] Download de: " + results.length + " ocorrências. (" + taxon_key + ")")
+
                     if (finished){
                         resolve(results)
                     } else {
@@ -156,7 +163,7 @@ const downloadOcorrenceGBIF = (entry_name) => {
                     .catch(error => {
                         console.log("Erro no download do GBIF para a espécie: " + entry_name)
                         console.log(error)
-                        throw new Error("Erro no download do GBIF para a espécie: " + entry_name)
+                        reject(new Error("Erro no download do GBIF para a espécie: " + entry_name))
                     })
         })
 };
@@ -166,9 +173,8 @@ const loadCorrection = async (obj) => {
     return new Promise(resolve => {
         try {
             if (!obj.name) {
-                resolve({})
+                resolve(null)
             } else {
-
                 getCorrectorGBIF(obj).then((data) => {
                     if (data.length > 0) {
                         resolve(data[0])
@@ -177,17 +183,22 @@ const loadCorrection = async (obj) => {
                         axios
                             .get(url)
                             .then(response => {
-                                insertCorrectorGBIF({name: obj.name, correction: response.data}).then((data) => {
-                                    getCorrectorGBIF(obj).then(data => {
-                                        if (data.length > 0) {
-                                            resolve(data[0])
-                                        } else {
-                                            resolve(null)
-                                        }
+                                //if (response.data.rank === 'SPECIES'){
+                                    insertCorrectorGBIF({name: obj.name, correction: response.data}).then((data) => {
+                                        getCorrectorGBIF(obj).then(data => {
+                                            if (data.length > 0) {
+                                                resolve(data[0])
+                                            } else {
+                                                resolve(null)
+                                            }
+                                        })
+                                    }).catch(() => {
+                                        resolve(null)
                                     })
-                                }).catch(() => {
-                                    resolve(null)
-                                })
+                                //}
+                                //else {
+                                //    resolve({})
+                                //}
                             }).catch(() => {
                             resolve(null)
                         })
@@ -221,6 +232,5 @@ const loadCorrectionOffline = async (obj) => {
 export {
     loadCorrection,
     loadCorrectionOffline,
-    downloadOcorrenceGBIF,
-    dropDBGBIF
+    downloadOcorrenceGBIF
 }

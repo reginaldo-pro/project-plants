@@ -20,4 +20,21 @@ const db = {
     correctorGBIF: dbFactory('correctorGBIF.db')
 };
 
+
+
+const dropDB = (dbName) => {
+    return db[dbName].remove({ }, { multi: true }, function (err, numRemoved) {
+        db.dbName.loadDatabase();
+      })
+};
+
+dropDB('entry')
+dropDB('csv')
+dropDB('FDB')
+dropDB('TPL')
+dropDB('plantsGBIF')
+dropDB('ocorrenciasGBIF')
+dropDB('ocorrenciasSPLINK')
+dropDB('correctorGBIF')
+
 module.exports = db;

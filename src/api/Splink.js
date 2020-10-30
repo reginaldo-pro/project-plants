@@ -10,13 +10,6 @@ const insertOC = async (item) => {
     return await db.ocorrenciasSPLINK.insert(item)
 }
 
-const dropSpLDB = async (item) => {
-    return await db.ocorrenciasSPLINK.remove({ }, { multi: true }, function (err, numRemoved) {
-        db.ocorrenciasSPLINK.loadDatabase();
-      });
-}
-
-
 const insertOcorrenciasSPLINK = (entry) => {
     let all_inserts = []
     entry.map(item => {
@@ -30,7 +23,7 @@ const insertOcorrenciasSPLINK = (entry) => {
         }
         all_inserts.push(
             db.ocorrenciasSPLINK.findOne(key)
-                .then(found => {      
+                .then(found => {   
                     if (found === null) {
                         return insertOC(item)
                             .then(item => {
@@ -41,12 +34,18 @@ const insertOcorrenciasSPLINK = (entry) => {
         )    
     })
     return Promise.all(all_inserts)
+        .then(ins => {
+            return Promise.resolve(ins.filter(e => e!== undefined))
+        })
 }
 
 const SPLINKUtils = (entry_name, array) => {
+    if (entry_name.entry_name.includes("Mertensia zizyphoides") || entry_name.entry_name.includes("Aulomyrcia acutifolia") || entry_name.entry_name.includes("Erythroxylum amplifolium ")){
+        debugger
+    }
     let entry_name_without_author = getSpeciesAndAuthor(entry_name.entry_name)[0] //entry_name.replace(/[(].*[)]/, '').trim()
     let entries = array
-        .filter(e => e != null)
+        .filter(e => e !== null)
         .map(e => {
             let res_entry_name = getSpeciesAndAuthor(e.scientificName + ' (' + e.scientificNameAuthorship + ')').join(' ')
 
@@ -89,18 +88,19 @@ const OccorrenceSPLINKInsert = (multi_entry_names) => {
                 let names  = multi_entry_names.map(e =>{
                     return (getSpeciesAndAuthor(e.entry_name)[0])
                 })
-                let all_sp = []
-                let all_sp_names = []       
+
+                let all_sp = []   
                 _download(encodeURI(names.join("/")))
                     .then(data => {
                         for (var sp_name of multi_entry_names) {
+                            console.log(sp_name)
+                            console.log("----")
                             let res = SPLINKUtils(sp_name, data)
                             if (res.length>0){                                
-                                all_sp.push(insertOcorrenciasSPLINK(res))
-                                all_sp_names.push(sp_name)                                        
+                                all_sp.push(insertOcorrenciasSPLINK(res))                                    
                             }                    
                         }
-                        Promise.all(all_sp).then(e => {                   
+                        Promise.all(all_sp).then(e => {               
                             resolve(e)
                         })
                     })
@@ -120,6 +120,7 @@ const _download = async (sp_names) => {
                 let res =  Papa.parse(response.data, {
                     header: true
                 })
+                console.log("[SPL] Download de: " + res.data.length + " ocorrências.")
               
                 resolve(res.data.filter(e => e.seq !== ''))
           }).catch(er => {
@@ -141,5 +142,5 @@ const downloadOcorrenceSPLINK = (multi_entry_names) => {
 };
 
 export {
-    downloadOcorrenceSPLINK, dropSpLDB
+    downloadOcorrenceSPLINK
 }

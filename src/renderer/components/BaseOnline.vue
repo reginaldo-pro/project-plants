@@ -104,8 +104,6 @@
                 return cond ? "Igual" : "Diferente"
             },
             toCSV: function () {
-
-
                 let csv = Papa.unparse(this.items, {
                     quotes: true, //or array of booleans
                     quoteChar: '"',
@@ -133,14 +131,14 @@
                 })
             },
             load_FDB(obj) {
-                return FDBget(obj.name).then(item => {
-                    this.header = Object.keys(item);
+                return FDBget({entry_name: obj.name}).then(item => {                    
+                    this.header = Object.keys(item)                    
                     return item
                 });
 
             },
             load_TPL(obj) {
-                return TPLget(obj.name).then(item => {
+                return TPLget({entry_name: obj.name}).then(item => {
                     this.header = Object.keys(item);
                     return item
                 })
@@ -160,21 +158,20 @@
             },
             loadPage(csv) {
                 getEntries({fileName: csv}).then(data => {
-                    this.totalSteps = data.length;
-                    
+                    this.totalSteps = data.length  
+               
                     if (this.site_a !== "None" && this.site_b !== "None"){
                         data.forEach(entry => {
                             let a = this["load_" + this.site_a]({
                                 name: entry.name,
-                            });
+                            })
 
                             let b = this["load_" + this.site_b]({
                                 name: entry.name,
-                            });
+                            })                            
 
-
-                            Promise.all([a,b]).then(results => {
-                                var [SITE_A, SITE_B] = results
+                            Promise.all([a,b]).then(results => {                                
+                                var [SITE_A, SITE_B] = results                                
 
                                 if ((!SITE_A || SITE_A['Status taxonômico'].includes('Nao encontrado') || SITE_A['Status taxonômico'] === '') && (!SITE_B || SITE_B['Status taxonômico'].includes('Nao encontrado') || SITE_B['Status taxonômico'] === '')) {
                                     this.items.push({
@@ -196,10 +193,10 @@
                             })                            
                         })                       
                     } else if (this.site_a !== "None"){
-                        data.forEach(entry => {
+                        data.forEach(entry => {                            
                             let a = this["load_" + this.site_a]({name: entry.name});
-                            a.then((SITE_A) => {
-                                if (SITE_A['Status taxonômico'].includes('Nao encontrado') || SITE_A['Status taxonômico'] === ''){
+                            a.then((SITE_A) => {                                
+                                if (SITE_A['Status taxonômico'].includes('Nao encontrado') || SITE_A['Status taxonômico'] === ''){                                    
                                     this.items.push({
                                                     "Nome Pesquisado": entry.name,
                                                     "Status taxonômico": "[" + this.site_a + "] Nao encontrado."
