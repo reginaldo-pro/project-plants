@@ -202,8 +202,6 @@ const loadCorrection = async (obj) => {
                             }).catch(() => {
                             resolve(null)
                         })
-
-
                     }
                 }).catch(() => {
                     resolve(null)

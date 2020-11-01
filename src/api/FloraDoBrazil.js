@@ -22,106 +22,64 @@ const FDBInsertOrUpdate = async (entry_name, obj) => {
     })
 };
 
-const _FDBSearch = async (entry_name2, entry_name, correction, synonym = null) => {
-    return new Promise((resolve, reject) => {
-        try {
-            if (entry_name) {
-                const consulta_taxon_name = axios.create({
-                    baseURL: 'http://servicos.jbrj.gov.br/flora/taxon/',
-                });
-                const consulta_taxon_fixa_publica = 'http://floradobrasil.jbrj.gov.br/reflora/listaBrasil/ConsultaPublicaUC/ResultadoDaConsultaCarregaTaxonGrupo.do?&idDadosListaBrasil='
-
-                consulta_taxon_name.get(entry_name, {cancelToken: cancelSource.token}).then(response => {
-                    let result = response.data.result;
-                    if (result && result.length === 1) {
-                        let data = result[0];
-                        if (data["taxonomicstatus"] === "NOME_ACEITO") {
-                            axios.get(consulta_taxon_fixa_publica + data["taxonid"], {cancelToken: cancelSource.token}).then(response => {
-                                let obj = {
-                                    entry_name: entry_name,
-                                    accept: data,
-                                    synonym: synonym,
-                                    ConsultaPublicaUC: response.data
-                                };
-                                resolve(obj)
-                            }).catch(e => {
-                                resolve(null)
-                            })
-                        } else {
-                            _FDBSearch(entry_name2, data["NOME ACEITO"][0]["scientificname"], null, data).then(data => {
-                                resolve(data)
-                            }).catch(e => {
-                                resolve(null)
-                            })
-                        }
-                    } else if (result && result.length > 0) {
-                        let index = most_accurate(result.map(item => item["scientificname"]), entry_name2);
-
-                        let data = result[index];
-
-                        if (data["taxonomicstatus"] === "NOME_ACEITO") {
-                            axios.get(consulta_taxon_fixa_publica + data["taxonid"], {cancelToken: cancelSource.token}).then(response => {
-                                let obj = {
-                                    entry_name: entry_name,
-                                    accept: data,
-                                    synonym: synonym,
-                                    ConsultaPublicaUC: response.data
-                                };
-                                resolve(obj)
-                            }).catch(e => {
-                                resolve(null)
-                            })
-                        } else {
-                            _FDBSearch(entry_name2, data["NOME ACEITO"][0]["scientificname"], null, data).then(data => {
-                                resolve(data)
-                            }).catch(e => {
-                                resolve(null)
-                            })
-                        }
-
-                    } else {
-                        if (correction) {
-                            _FDBSearch(entry_name2, correction).then(data => {
-                                resolve(data)
-                            }).catch(e => {
-                                resolve(null)
-                            })
-                        } else {
-                            resolve(null)
-                        }
-                    }
-                }).catch(e => {
-                    resolve(null)
-                })
-            } else {
-                resolve(null)
-            }
-        } catch (e) {
-            return null
-        }
-
+const _FDBSearch = async (entry_name) => {
+    const consulta_taxon_name = axios.create({
+        baseURL: 'http://servicos.jbrj.gov.br/flora/taxon/',
     })
+    const consulta_taxon_fixa_publica = 'http://floradobrasil.jbrj.gov.br/reflora/listaBrasil/ConsultaPublicaUC/ResultadoDaConsultaCarregaTaxonGrupo.do?&idDadosListaBrasil='
+
+    return  consulta_taxon_name.get(entry_name, {cancelToken: cancelSource.token})
+        .then(response => {
+            let result = response.data.result
+            let data = null
+
+            if (result){
+                if (result.length === 1){
+                    data = result[0]
+                }
+                else if (result.length > 0){
+                    var index = most_accurate(result.map(item => item["scientificname"]), entry_name)
+                    data = result[index]
+                }                
+            }   
+            if (data) {
+                return axios.get(consulta_taxon_fixa_publica + data["taxonid"], {cancelToken: cancelSource.token})
+                    .then(response => {
+                        let obj = {
+                            entry_name: entry_name,
+                            accept: data,
+                            synonym: (data["taxonomicstatus"] === "NOME_ACEITO") ? null : entry_name,
+                            ConsultaPublicaUC: response.data
+                        }
+                        return Promise.resolve(obj) 
+                    })
+            } else {
+                return Promise.resolve(null)
+            }            
+        })
 }
 
-const FDBSearch = async (entry_name2, entry_name, correction = null, synonym = null) => {
-    return db.FDB.findOne({entry_name: entry_name2}).then(data => {
-        if (data) {
-            return new Promise(resolve => {
-                resolve(data)
-            })
-        } else {
-            return _FDBSearch(entry_name2, entry_name, correction, synonym).then(data => {
-                if (data){
-                    data.accept.SINONIMO.map(e => {
-                        e['scientificname'] = e['scientificname'].replace(e['scientificnameauthorship'].trim(), "(" + e['scientificnameauthorship'].trim() + ")")
-                    })  
-                    data.accept.scientificname =  data.accept.scientificname.replace(data.accept.scientificnameauthorship, "(" + data.accept.scientificnameauthorship + ")")
-                    return FDBInsertOrUpdate(entry_name2, {...data, entry_name: entry_name2})
-                }
-            })
-        }
-    })
-};
+const FDBSearch = async (entry_name) => {
+    return db.FDB.findOne({entry_name: entry_name})
+        .then(data => {
+            if (data) {
+                return Promise.resolve(data)
+            } else {
+                return _FDBSearch(entry_name)
+                    .then(data => {                        
+                        if (data){
+                            if (data.accept.SINONIMO){
+                                data.accept.SINONIMO.map(e => {
+                                    e['scientificname'] = e['scientificname'].replace(e['scientificnameauthorship'].trim(), "(" + e['scientificnameauthorship'].trim() + ")")
+                                }) 
+                            } 
+                            data.accept.scientificname =  data.accept.scientificname.replace(data.accept.scientificnameauthorship, "(" + data.accept.scientificnameauthorship + ")")
+                            return FDBInsertOrUpdate(entry_name, {...data, entry_name: entry_name})
+                        }
+                    })
+            }
+        })     
+}
 
 const FDBget = async (entry_name) => {
     return new Promise(resolve => {
@@ -165,7 +123,9 @@ const FDBget = async (entry_name) => {
                 new_accept[language_FDB.distribution] = distribuicao.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 new_accept[language_FDB.possible_distribution] = distribuicao2.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-                new_accept[language_Entry.synonym] = item.accept["SINONIMO"].map(item => item["scientificname"]).join(", ");
+                if (item.accept["SINONIMO"]){
+                    new_accept[language_Entry.synonym] = item.accept["SINONIMO"].map(item => item["scientificname"]).join(", ");
+                }
 
                 let hierarchy = item.accept["higherclassification"].split(";")
                 new_accept[language_FDB.taxonomic_group] = hierarchy[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -173,7 +133,8 @@ const FDBget = async (entry_name) => {
 
                 new_accept[language_Entry.scientific_name] = item.accept['genus'] + " " + item.accept['specificepithet'];
                 new_accept[language_Entry.scientific_name_authorship] = item.accept['scientificnameauthorship'];
-                new_accept[language_Entry.search] = new_accept[language_Entry.search] + " [" + (item.synonym ? language_Entry.is_synonym : language_Entry.is_accept) + "]";
+
+                new_accept[language_Entry.search] = entry_name.entry_name + " [" + (item.synonym ? language_Entry.is_synonym : language_Entry.is_accept) + "]";
                 new_accept[language_Entry.taxonomic_status] = (item.synonym == null)? language_Entry.is_accept: language_Entry.is_synonym;
 
                 new_accept[language_FDB.life_form] = item.ConsultaPublicaUC["formaVida"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")

@@ -40,9 +40,6 @@ const insertOcorrenciasSPLINK = (entry) => {
 }
 
 const SPLINKUtils = (entry_name, array) => {
-    if (entry_name.entry_name.includes("Mertensia zizyphoides") || entry_name.entry_name.includes("Aulomyrcia acutifolia") || entry_name.entry_name.includes("Erythroxylum amplifolium ")){
-        debugger
-    }
     let entry_name_without_author = getSpeciesAndAuthor(entry_name.entry_name)[0] //entry_name.replace(/[(].*[)]/, '').trim()
     let entries = array
         .filter(e => e !== null)

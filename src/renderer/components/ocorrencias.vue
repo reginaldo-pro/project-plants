@@ -48,7 +48,7 @@
     import ProgressBar from "vue-simple-progress";
     import {getEntries, getSpDown, sleep} from "../../api";
     import Papa from "papaparse";
-    import {downloadOcorrenceGBIF, loadCorrection, dropDBGBIF} from "../../api/GBIF";
+    import {downloadOcorrenceGBIF, dropDBGBIF} from "../../api/GBIF";
     import {downloadOcorrenceSPLINK, dropSpLDB} from "../../api/Splink";
 
 

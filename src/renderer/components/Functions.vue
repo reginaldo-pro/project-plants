@@ -201,60 +201,57 @@
                         1: {name: "TPL", req: {}}
                     }
                     new Promise(resolve => {
-                        try {
-                            loadCorrection({name: entry.name}).then(corrector => {
-                                if (corrector.correction === undefined) {
-                                    corrector.correction = {}
-                                    resolve(null)
-                                }
-
-                                for (let prop in bases) {
-                                    bases[prop].req = this["load_" + bases[prop].name]({
-                                        name: entry.name,
-                                        usageKey: corrector.correction.usageKey,
-                                        acceptedUsageKey: corrector.correction.acceptedUsageKey,
-                                        correction: corrector.correction.scientificName,
-                                        correction2: corrector.correction.canonicalName
-                                    }).then(item => {
-                                        let status_tag = {[this.accept]: 0, [this.synonym]: 1, ['']: 2};
-                                        this.status.values[prop][status_tag[item.status]] += 1;
-                                        this.graph += 1;
-                                        this.items[prop].completedSteps += 1;
-                                        return item
-                                    }).catch(() => {
+                        try {                        
+                            bases[0].req = this.load_FDB(
+                                { name: entry.name }
+                            )
+                                .then(item =>{
+                                    let status_tag = {[this.accept]: 0, [this.synonym]: 1, ['']: 2};
+                                    this.status.values[0][status_tag[item.status]] += 1;
+                                    this.graph += 1;
+                                    this.items[0].completedSteps += 1;
+                                    return item    
+                                })
+                                .catch(() => {
                                         resolve(null)
-                                    })
-
-                                }
-
-                                bases[0].req.then((fdb) => {
-                                    bases[1].req.then((tpl) => {
-                                        let FDBxTPL = 0;
-
-                                        let a = this.relationx2(fdb, tpl);
-                                        for (let i = 0; i < a.length; i++)
-                                            this.relation.values[i] += a[i];
-                                        this.graph2 += 1;
-
-                                        let condFDB = this.items[0].completedSteps === this.items[0].totalSteps;
-                                        let condTPL = this.items[1].completedSteps === this.items[1].totalSteps;
-                                        resolve(bases)
-
-                                    }).catch(() => {
+                                })
+                            
+                            bases[1].req = this.load_TPL(
+                                { name: entry.name }
+                            )  
+                                .then(item =>{
+                                    let status_tag = {[this.accept]: 0, [this.synonym]: 1, ['']: 2};
+                                    this.status.values[1][status_tag[item.status]] += 1;
+                                    this.graph += 1;
+                                    this.items[1].completedSteps += 1;
+                                    return item    
+                                })
+                                .catch(() => {
                                         resolve(null)
-                                    })
-                                }).catch(() => {
+                                })       
+                                
+                            Promise.all([bases[0].req, bases[1].req])
+                                .then(item => {                                  
+                                    let FDBxTPL = 0;
+
+                                    let a = this.relationx2(fdb, tpl);
+                                    for (let i = 0; i < a.length; i++)
+                                        this.relation.values[i] += a[i];
+                                    this.graph2 += 1;
+
+                                    let condFDB = this.items[0].completedSteps === this.items[0].totalSteps;
+                                    let condTPL = this.items[1].completedSteps === this.items[1].totalSteps;
+                                    resolve(bases)
+                                })
+                                .catch(() => {
                                     resolve(null)
                                 })
-                            })
                         } catch (e) {
+                            console.log(e)
                             resolve(null)
                         }
                     })
-
-
                 })
-
             })
         },
         methods: {
@@ -266,36 +263,43 @@
                 return a;
             },
             load_FDB(obj) {
-                return FDBSearch(obj.name, obj.correction, obj.correction2).then(item => {
-                    if (item) {
-                        return {
-                            status: item.synonym ? this.synonym : (!item.synonym && !item.accept) ? "" : this.accept,
-                            name: item.accept ? item.accept['scientificname'] : ""
+                return FDBSearch(obj.name)
+                    .then(item => {                        
+                        if (item) {
+                            return {
+                                status: item.accept ? "Taxon aceito" : "",
+                                name: item.accept ? item.accept['scientificname'] : ""
+                            }
+                        } else {
+                            return {
+                                status: "",
+                                name: ""
+                            }
                         }
-                    } else {
-                        return {
-                            status: "",
-                            name: ""
-                        }
-                    }
-                })
-
+                    })
             },
             load_TPL(obj) {
-                return TPLSearch(obj.name, obj.correction, obj.correction2).then(item => {
-
-                    if (item) {
-                        return {
-                            status: item.synonym ? this.synonym : (!item.synonym && !item.accept) ? "" : this.accept,
-                            name: item.accept ? item.accept['Genus'] + " " + item.accept['Species'] + " " + item.accept['Authorship'] : ""
+                return loadCorrection(obj)
+                    .then(corrector => {
+                        if (corrector) {
+                            return TPLSearch(obj.name, corrector.correction.scientificName, corrector.correction.canonicalName)
+                        } else {
+                            return Promise.resolve(null)
                         }
-                    } else {
-                        return {
-                            status: "",
-                            name: ""
+                    })
+                    .then(item => {
+                        if (item) {
+                            return {
+                                status: item.synonym ? this.synonym : (!item.synonym && !item.accept) ? "" : this.accept,
+                                name: item.accept ? item.accept['Genus'] + " " + item.accept['Species'] + " " + item.accept['Authorship'] : ""
+                            }
+                        } else {
+                            return {
+                                status: "",
+                                name: ""
+                            }
                         }
-                    }
-                })
+                    })               
             },
             load_GBIF(obj) {
                 return loadGBIF(obj).then((item) => {
