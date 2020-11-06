@@ -9,12 +9,12 @@ const FDBfind = async (obj) => {
     return db.FDB.findOne(obj)
 }
 
-const FDBInsertOrUpdate = async (search_name, obj) => {
-    let key = {
-        entry_name: search_name,
-        found_name: obj.found_name,
-        accepted_name: obj.accepted_name
-    }
+const FDBInsertOrUpdate = async (obj) => {
+    let key = {}
+    key[language_Entry.search_name] =  obj[language_Entry.search_name]
+    key[language_Entry.found_name] =  obj[language_Entry.found_name]
+    key[language_Entry.accepted_name] =  obj[language_Entry.accepted_name]
+    
     return db.FDB.findOne(key)
         .then(data => {
             if (!data) {
@@ -58,6 +58,12 @@ const _FDBSearch = async (search_name) => {
                         obj[language_Entry.search_name] = search_name
                         obj[language_Entry.found_name] = getSpeciesAndAuthor(data["scientificname"]).join(' ')
                         obj[language_Entry.accepted_name] = accepted_name
+
+                        if (data.SINONIMO){
+                            data.SINONIMO.map(e => {
+                                e["scientificname"] = getSpeciesAndAuthor(e["scientificname"]).join(' ')
+                            }) 
+                        } 
                         obj["results"] = data
                         obj["details"] = response.data
         
@@ -70,7 +76,10 @@ const _FDBSearch = async (search_name) => {
 }
 
 const FDBSearch = async (search_name) => {
-    return db.FDB.findOne({search_name: search_name})
+    let key = {}
+    key[language_Entry.search_name] = search_name
+
+    return db.FDB.findOne(key)
         .then(data => {
             if (data) {
                 return Promise.resolve(data)
@@ -78,13 +87,7 @@ const FDBSearch = async (search_name) => {
                 return _FDBSearch(search_name)
                     .then(data => {                        
                         if (data){
-                            if (data.results.SINONIMO){
-                                data.results.SINONIMO.map(e => {
-                                    e['scientificname'] = e['scientificname'].replace(e['scientificnameauthorship'].trim(), "(" + e['scientificnameauthorship'].trim() + ")")
-                                }) 
-                            } 
-                            data.results.scientificname =  data.results.scientificname.replace(data.results.scientificnameauthorship, " (" + data.results.scientificnameauthorship.trim() + ")")
-                            return FDBInsertOrUpdate(search_name, {...data, search_name: search_name})
+                            return FDBInsertOrUpdate(data)
                         }
                     })
             }
@@ -113,6 +116,7 @@ const FDBget = async (search_name) => {
 
         let key = {}
         key[language_Entry.search_name] = search_name
+        
         db.FDB.findOne(key).then(item => {            
             if (item) {          
                 new_accept[language_Entry.search_name] = item[language_Entry.search_name]

@@ -284,8 +284,8 @@
                     .then(item => {
                         if (item) {
                             return {
-                                status: item.synonym ? this.synonym : (!item.synonym && !item.accept) ? "" : this.accept,
-                                name: item.accept ? item.accept['Genus'] + " " + item.accept['Species'] + " " + item.accept['Authorship'] : ""
+                                status: (item[language_Entry.accepted_name] !== item[language_Entry.found_name] ? this.synonym : this.accept),
+                                name: item[language_Entry.accepted_name]
                             }
                         } else {
                             return {
