@@ -162,6 +162,7 @@
     import {loadCorrection} from "../../api/GBIF";
     import {FDBSearch} from "../../api/FloraDoBrazil";
     import {TPLSearch} from "../../api/ThePlantList";
+    import {language_Entry} from "../../language/PTBR";
 
     export default {
         name: "Functions",
@@ -267,8 +268,8 @@
                     .then(item => {                        
                         if (item) {
                             return {
-                                status: item.accept ? "Taxon aceito" : "",
-                                name: item.accept ? item.accept['scientificname'] : ""
+                                status: (item[language_Entry.accepted_name] !== item[language_Entry.found_name] ? this.synonym : this.accept),
+                                name: item[language_Entry.accepted_name] 
                             }
                         } else {
                             return {
@@ -279,14 +280,7 @@
                     })
             },
             load_TPL(obj) {
-                return loadCorrection(obj)
-                    .then(corrector => {
-                        if (corrector) {
-                            return TPLSearch(obj.name, corrector.correction.scientificName, corrector.correction.canonicalName)
-                        } else {
-                            return Promise.resolve(null)
-                        }
-                    })
+                return TPLSearch(obj.name)
                     .then(item => {
                         if (item) {
                             return {
@@ -299,7 +293,7 @@
                                 name: ""
                             }
                         }
-                    })               
+                    })                
             },
             load_GBIF(obj) {
                 return loadGBIF(obj).then((item) => {

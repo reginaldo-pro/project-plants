@@ -203,7 +203,7 @@ const getSpDown = async (sps) => {
     let all_down = []
 
     sps.forEach(entry => {
-        all_down.push(FDBget({entry_name: entry.name}))
+        all_down.push(FDBget(entry.name))
         all_down.push(TPLget({entry_name: entry.name}))
     })
     return Promise.all(all_down).then(results => {
@@ -241,7 +241,7 @@ const getSpeciesAndAuthor = (speciesStringName) => {
     var clear_str = speciesStringName
         .replace(/[{()}]/g, '')
         .replace(/\s\s+/g, ' ')
-    var cap_words = clear_str.match(/(\b[A-Z][A-Za-z]+|\b[A-Z]\b)/g)
+    var cap_words = clear_str.match(/(\b[A-Z.][A-Za-z.]+|\b[A-Z.]\b)/g)
     var author = ''
     var species = ''
     if (cap_words.length>1){
@@ -251,12 +251,15 @@ const getSpeciesAndAuthor = (speciesStringName) => {
             .filter(w => w !== '') 
             .slice(1)
             .join(' ')
+        part_of_author = part_of_author.length > 0
+            ? " " + part_of_author
+            : part_of_author
 
         species = clear_str
             .split(cap_words[1])
             .map(w => w.trim())
             .filter(w => w !== '') 
-            .slice(0,1)
+        species = species[0]
 
         author = "(" + cap_words[1].trim() + part_of_author + ")"
     } else {

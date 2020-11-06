@@ -21,99 +21,111 @@ const TPLInsertOrUpdate = async (entry_name, obj) => {
 
 
 };
-const _TPLSearch = async (entry_name2, entry_name, correction, synonym = null, filter = false) => {
-    return new Promise((resolve, reject) => {
-        try {
-            if (entry_name) {
-                const consulta_taxon_name = "http://www.theplantlist.org/tpl1.1/search?q=" + entry_name + "&csv=true"
 
-                axios.get(consulta_taxon_name)
-                    .then(response => {
-                        let data = Papa.parse(response.data, {
-                            header: true
-                        });
 
-                        let result = data.data;
-                        let index = most_accurate(result.map(item => {
-                            return item['Genus'] + " " + item['Species'] + " " + item['Authorship']
-                        }), entry_name2);
-                        
-                        if (result.length > 0) {
-                            let item = result[index];
+const _TPLCorrection = (entry_name) => {
+    const consulta_taxon_name = "http://www.theplantlist.org/tpl1.1/search?q=" + entry_name + "&csv=true"
 
-                            if (item["Taxonomic status in TPL"] === "Accepted") {
-                                const consulta_taxon_fixa_publica = 'http://www.theplantlist.org/tpl1.1/record/' + item['ID'] + '?ref=tpl2'
+    return axios.get(consulta_taxon_name)
+        .then(response => {
+            let data = Papa.parse(response.data, {
+                header: true
+            });
+            
+            let result = data.data
+                .filter(e => (e.ID !== "" && (e["Taxonomic status in TPL"] === "Accepted" || e["Taxonomic status in TPL"] === "Synonym")))
+                
+            let index = most_accurate(result.map(e => {
+                return e['Genus'] + " " + e['Species'] + " " + e['Authorship']
+            }), entry_name)
 
-                                axios.get(consulta_taxon_fixa_publica).then(response => {
-                                    let soup = new JSSoup(response.data)
-                                    let record = soup.find('tbody').contents.map(item => {                                     
-                                        var _last_one = item.contents[0].contents[0].contents[0].contents.length - 1
-                                        var _name = item.contents[0].getText(' ')                                        
-                                        var _author = item.contents[0].contents[0].contents[0].contents[_last_one].getText(' ')
-                                        _name = _name.replace(_author, "(" + _author.trim() + ")")
-                                        return {
-                                            name: _name,
-                                            status: item.contents[1].getText(' '),
-                                            source: item.contents[3].getText(' '),
-                                        }
-                                    });
-                                    let obj = {
-                                        entry_name: entry_name,
-                                        accept: item,
-                                        synonym: synonym,
-                                        record: record
-                                    };
-                                    resolve(obj)
-                                }).catch(err => {
-                                    resolve(null)
-                                })
-                            } else {
-                                _TPLSearch(entry_name2, item['Accepted ID'], null, item, true).then(data => {
-                                    resolve(data)
-                                }).then(e => {
-                                    resolve(null)
-                                })
-                            }
-                        } else {
-                            if (correction) {
-                                _TPLSearch(entry_name2, correction).then(data => {
-                                    if (data) {
-                                        resolve(data)
-                                    } else {
-                                        resolve(null)
-                                    }
-                                }).catch(e => {
-                                    resolve(null)
-                                })
-                            } else {
-                                resolve(null)
-                            }
-                        }
-                    }).catch(e => {
-                    resolve(null)
-                })
-            } else {
-                resolve(null)
+            if (index >= 0){
+                return Promise.resolve(result[index])
             }
-        } catch (e) {
-            return null
-        }
+            else {
+                return Promise.resolve(null)
+            }
+        })
+        .catch(e =>{
+            return Promise.resolve(null)
+        })
+} 
 
-    })
+const _TPLSearch = (entry_name) => {
+    return _TPLCorrection(entry_name)
+        .then(result => {
+            if (result){
+                if (result["Taxonomic status in TPL"] === "Accepted") {                    
+                    let consulta_taxon_fixa_publica = 'http://www.theplantlist.org/tpl1.1/record/' + result['ID'] + '?ref=tpl2'
+                    return axios.get(consulta_taxon_fixa_publica)
+                        .then(response => {
+                            let soup = new JSSoup(response.data)
+                            let syn_list = soup.find('tbody').contents.map(item => {                                     
+                                var _last_one = item.contents[0].contents[0].contents[0].contents.length - 1
+                                var _name = item.contents[0].getText(' ')                                        
+                                var _author = item.contents[0].contents[0].contents[0].contents[_last_one].getText(' ')
+                                _name = _name.replace(_author, "(" + _author.trim() + ")")                                
+                                return {
+                                    entry_name: entry_name,
+                                    accept: _name,
+                                    synonym: item.contents[1].getText() ? entry_name : item.contents[1].getText(),
+                                    result: null
+                                }
+                            })
+
+                            let infra_epi = result['Infraspecific epithet'].trim().length > 0 
+                                ? (result['Infraspecific rank'].trim() + " " + result['Infraspecific epithet'].trim() + " ")
+                                : ""                            
+                            syn_list.push({
+                                entry_name: entry_name,
+                                accept: result['Genus'] + " " + result['Species'] + " " + infra_epi + result['Authorship'],
+                                synonym: null,
+                                result: result
+                            })                            
+                            return Promise.resolve(syn_list)
+                        })
+                } else {
+                    let consulta_taxon_fixa_publica = 'http://www.theplantlist.org/tpl1.1/record/' + result['Accepted ID'] + '?ref=tpl2'
+                    return axios.get(consulta_taxon_fixa_publica)
+                        .then(response => {
+                            let soup = new JSSoup(response.data)
+
+                            let complete_name = soup.findAll('h1')[1].find('span', {'class': 'name'}).getText(' ')
+                            let infra_epi = result['Infraspecific epithet'].trim().length > 0 
+                                ? (result['Infraspecific rank'].trim() + " " + result['Infraspecific epithet'].trim() + " ")
+                                : ""   
+                            
+                            return Promise.resolve(
+                                [{
+                                    entry_name: entry_name,
+                                    accept: result['Genus'] + " " + result['Species'] + " " + infra_epi + result['Authorship'],
+                                    synonym: complete_name,
+                                    result: result
+                                }]
+                            )
+                        })                
+                }
+            }
+            else {
+                return Promise.resolve(null)
+            }
+        })
 }
 
-const TPLSearch = async (entry_name2, entry_name, correction = null, synonym = null) => {
-    return db.TPL.findOne({entry_name: entry_name2}).then(data => {
+const TPLSearch = (entry_name) => {
+    return db.TPL.findOne({entry_name: entry_name}).then(data => {
         if (data) {
-            return new Promise(resolve => {
-                resolve(data)
-            })
+            return Promise.resolve(data)
         } else {
-            return _TPLSearch(entry_name2, entry_name, correction, synonym).then(data => {
-                if (data){
-                    return TPLInsertOrUpdate(entry_name2, {...data, entry_name: entry_name2})
-                }
-            })
+            return _TPLSearch(entry_name)
+                .then(data => {                    
+                    if (data){
+                        return TPLInsertOrUpdate(entry_name, {...data, entry_name: entry_name})
+                    }
+                    else {
+                        return Promise.resolve(null)
+                    }
+                })
         }
     })
 };

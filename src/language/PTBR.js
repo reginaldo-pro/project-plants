@@ -11,7 +11,7 @@ const language_FDB = {
     site: "Flora do Brasil",
     life_form: "Forma de Vida",
     substrate: 'Substrato',
-    taxonomic_group: ("Grupo Taxonómico"),
+    taxonomic_group: ("Grupo Taxonômico"),
     source: 'Origem',
     endemism: 'Endemismo',
     distribution: ("Distribuição"),
@@ -21,12 +21,12 @@ const language_FDB = {
 }
 
 const language_Entry = {
-    search: "NOME PESQUISADO",
-    scientific_name: ("Nome científico"),
-    scientific_name_authorship: ("Autor aceito"),
-    taxonomic_status: ("Status taxonômico"),
+    search_name: ("Nome Pesquisado"),
+    found_name: ("Nome Encontrado"),
+    accepted_name: ("Nome Aceito"),
+    taxonomic_status: ("Status Taxonômico"),
     family: ("Família"),
-    synonym: ("Sinônimos"),
+    synonyms: ("Sinônimos"),
     is_synonym: ("Sinônimo"),
     is_accept: ("Taxonômico Aceito"),
 }
