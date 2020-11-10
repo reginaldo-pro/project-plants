@@ -231,7 +231,7 @@
                             bases[0].req
                                 .then((fdb) => {
                                     bases[1].req
-                                        .then((tpl) => {
+                                        .then((tpl) => {                                            
                                             let FDBxTPL = 0;
 
                                             let a = this.relationx2(fdb, tpl);

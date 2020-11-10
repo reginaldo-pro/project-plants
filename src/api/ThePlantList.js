@@ -52,15 +52,17 @@ const _TPLCorrection = (search_name) => {
 
 const _TPLSearch = (search_name) => {
     return _TPLCorrection(search_name)
-        .then(result => {            
-            if (result){
+        .then(result => {       
+            if (result){                
                 if (result["Taxonomic status in TPL"] === "Accepted") {                                  
                     let consulta_taxon_fixa_publica = 'http://www.theplantlist.org/tpl1.1/record/' + result['ID'] + '?ref=tpl2'                    
                     return axios.get(consulta_taxon_fixa_publica)
-                        .then(response => {
+                        .then(response => {                            
                             let soup = new JSSoup(response.data)
-                            let syn_list = soup.find('tbody').contents
-                                .map(item => {                                     
+                            let syn_list = soup.find('tbody')
+                            
+                            if (syn_list){
+                                syn_list = syn_list.contents.map(item => {                                     
                                     var _last_one = item.contents[0].contents[0].contents[0].contents.length - 1
                                     var _name = item.contents[0].getText(' ')                                        
                                     var _author = item.contents[0].contents[0].contents[0].contents[_last_one].getText(' ')
@@ -71,6 +73,10 @@ const _TPLSearch = (search_name) => {
                                     }                                    
                                 })
                                 .reduce((a, c) => c ? a + ", " + c : a)
+                            }
+                            else {
+                                syn_list = []
+                            }
                                     
                             let obj = {}
                             obj[language_Entry.search_name] = search_name
@@ -79,8 +85,9 @@ const _TPLSearch = (search_name) => {
                             obj[language_Entry.synonyms] = syn_list
                             obj[language_Entry.family] = soup.findAll('i', 'family')[0].getText().trim()
                             obj["results"] = result
-                            obj["details"] = soup.find('tbody').getText(' ')
-                                                  
+                            obj["details"] = (soup.find('tbody')) ? soup.find('tbody').getText(' ') : []
+                                 
+                            
                             return Promise.resolve(obj)
                         })
                 } else {
@@ -102,7 +109,7 @@ const _TPLSearch = (search_name) => {
                             obj[language_Entry.family] = soup.findAll('i', 'family')[0].getText().trim()
                             obj["results"] = result
                             obj["details"] = soup.contents[1].getText(' ')
-                                                    
+                                                
                             return Promise.resolve(obj)
                         })                
                 }
@@ -122,7 +129,7 @@ const TPLSearch = (search_name) => {
             return Promise.resolve(data)
         } else {
             return _TPLSearch(search_name)
-                .then(data => {                                        
+                .then(data => {                              
                     if (data){
                         return TPLInsertOrUpdate(data)
                     }
