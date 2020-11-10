@@ -4,6 +4,7 @@ import { trim } from "jquery";
 import * as db from "../db";
 import { cancelSource } from "./utils";
 import { sleep, getSpeciesAndAuthor } from "./index";
+import { language_Entry } from "../language/PTBR";
 
 const insertOC = async (item) => {
     return await db.ocorrenciasGBIF.insert(item)
@@ -44,7 +45,7 @@ const getCorrectorGBIF = async (cond) => {
 }
 
 const GBIFutils = (entry_name, usageKey, array) => {
-    let entry_name_without_author = getSpeciesAndAuthor(entry_name.entry_name)[0] //entry_name.replace(/[(].*[)]/, '').trim()
+    let entry_name_without_author = getSpeciesAndAuthor(entry_name[language_Entry.search_name])[0] 
     let entries = array
         .filter(e => e != null)
         .map(e => {
@@ -55,9 +56,9 @@ const GBIFutils = (entry_name, usageKey, array) => {
             }
 
             let res =  {
-                "entry_name": getSpeciesAndAuthor(entry_name.entry_name).join(' '),
+                "entry_name": entry_name[language_Entry.search_name],
                 "found_name": res_entry_name,
-                "accepted_name": getSpeciesAndAuthor(entry_name.accepted_name).join(' '),
+                "accepted_name": entry_name[language_Entry.accepted_name],
                 "base de dados": 'GBIF',
                 'familia': e.family ? e.family : '',
                 'pais': e.countryCode ? e.countryCode : '',
@@ -80,28 +81,32 @@ const GBIFutils = (entry_name, usageKey, array) => {
 
 const OccorrenceGBIFInsert = async (entry_name, usageKey) => {
     return new Promise((resolve, reject) => {   
-        db.ocorrenciasGBIF.find({usageKey: usageKey})
-            .then(found => {
-                if (found.length>0){
-                    resolve(found)
-                }
-                else {
-                    var data_down = _download(usageKey, 0)           
-                    data_down
-                        .then(data => {
-                            console.log(entry_name)
-                            console.log("----")
-                            let res = GBIFutils(entry_name, usageKey, data)    
-                            insertOcorrenciasGBIF(res)
-                                .then((data) => {
-                                    resolve(data)
+        if (!usageKey){
+            resolve([{entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:''}])
+        }
+        else {
+            db.ocorrenciasGBIF.find({usageKey: usageKey})
+                .then(found => {                
+                    if (found.length>0){
+                        resolve(found)
+                    }
+                    else {                    
+                        _download(usageKey, 0)           
+                            .then(data => {                            
+                                console.log(entry_name[language_Entry.search_name])
+                                console.log("GBIF----")
+                                let res = GBIFutils(entry_name, usageKey, data)    
+                                insertOcorrenciasGBIF(res)
+                                    .then((data) => {
+                                        resolve(data)
+                                    })
                                 })
-                            })
-                }
-            })
-            .catch((e) => {
-                reject(e)
-            })
+                    }
+                })
+                .catch((e) => {
+                    reject(e)
+                })
+            }
     })
 }
 
@@ -151,9 +156,13 @@ const _download = (taxon_key, offset = 0) => {
 }
 
 const downloadOcorrenceGBIF = (entry_name) => {
-    return loadCorrection({name: entry_name.entry_name})
-        .then(data => { 
-            return OccorrenceGBIFInsert(entry_name, data['correction']['usageKey'])
+    return loadCorrection({name: entry_name[language_Entry.search_name]})
+        .then(data => {           
+            let correction = (data['correction']['matchType'] === "NONE")
+                ? null
+                : data['correction']['usageKey']
+
+            return OccorrenceGBIFInsert(entry_name, correction)
                     .then(data => { 
                         return Promise.all(data)
                     })
@@ -161,9 +170,9 @@ const downloadOcorrenceGBIF = (entry_name) => {
                         return Promise.resolve(data.filter(e => e !== undefined))
                     })
                     .catch(error => {
-                        console.log("Erro no download do GBIF para a espécie: " + entry_name)
+                        console.log("Erro no download do GBIF para a espécie: " + entry_name[language_Entry.search_name])
                         console.log(error)
-                        reject(new Error("Erro no download do GBIF para a espécie: " + entry_name))
+                        reject(new Error("Erro no download do GBIF para a espécie: " + entry_name[language_Entry.search_name]))
                     })
         })
 };
@@ -182,7 +191,7 @@ const loadCorrection = async (obj) => {
                         let url = "https://api.gbif.org/v1/species/match?name=" + obj.name;
                         axios
                             .get(url)
-                            .then(response => {
+                            .then(response => {                                
                                 //if (response.data.rank === 'SPECIES'){
                                     insertCorrectorGBIF({name: obj.name, correction: response.data}).then((data) => {
                                         getCorrectorGBIF(obj).then(data => {
@@ -197,7 +206,7 @@ const loadCorrection = async (obj) => {
                                     })
                                 //}
                                 //else {
-                                //    resolve({})
+                                //    resolve(null)
                                 //}
                             }).catch(() => {
                             resolve(null)

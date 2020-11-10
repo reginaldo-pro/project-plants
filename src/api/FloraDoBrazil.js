@@ -51,7 +51,11 @@ const _FDBSearch = async (search_name) => {
                             : getSpeciesAndAuthor(data["scientificname"]).join(' ')
                         
                         if ((data["taxonomicstatus"] === "SINONIMO") && data["NOME ACEITO"].length>1){
-                            accepted_name = data["NOME ACEITO"].reduce((a,c) => a + "," + c["scientificname"])
+                            accepted_name = data["NOME ACEITO"]
+                                .map(e  => {
+                                    return (getSpeciesAndAuthor(e["scientificname"]).join(' '))
+                                })
+                                .reduce((a,c) => a + ", " + c)
                         }
 
                         let obj = {}
@@ -59,14 +63,22 @@ const _FDBSearch = async (search_name) => {
                         obj[language_Entry.found_name] = getSpeciesAndAuthor(data["scientificname"]).join(' ')
                         obj[language_Entry.accepted_name] = accepted_name
 
-                        if (data.SINONIMO){
-                            data.SINONIMO.map(e => {
-                                e["scientificname"] = getSpeciesAndAuthor(e["scientificname"]).join(' ')
-                            }) 
+                        if (data.SINONIMO && data.SINONIMO.length > 0){
+                            obj[language_Entry.synonyms] = data.SINONIMO.map(e  => {
+                                return (getSpeciesAndAuthor(e["scientificname"]).join(' '))
+                            })
+                            .reduce((a,c) => a + ", " + c)
                         } 
+                        else {
+                            obj[language_Entry.synonyms] = []
+                        }
                         obj["results"] = data
                         obj["details"] = response.data
-        
+
+                        let hierarchy = obj.results["higherclassification"].split(";")
+                        obj[language_Entry.family] = hierarchy[2].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                        obj[language_Entry.family] = obj[language_Entry.family].split(' ')[0]    
+
                         return Promise.resolve(obj) 
                     })
             } else {
@@ -97,7 +109,7 @@ const FDBSearch = async (search_name) => {
 const FDBget = async (search_name) => {
     return new Promise(resolve => {
         let new_accept = {
-            [language_Entry.search_name]: '',
+            [language_Entry.search_name]: search_name,
             [language_Entry.found_name]: '',
             [language_Entry.accepted_name]: '',
             [language_Entry.taxonomic_status]: '',
@@ -117,7 +129,7 @@ const FDBget = async (search_name) => {
         let key = {}
         key[language_Entry.search_name] = search_name
         
-        db.FDB.findOne(key).then(item => {            
+        db.FDB.findOne(key).then(item => {          
             if (item) {          
                 new_accept[language_Entry.search_name] = item[language_Entry.search_name]
                 new_accept[language_Entry.found_name] = item[language_Entry.found_name]
@@ -127,12 +139,11 @@ const FDBget = async (search_name) => {
                     ? language_Entry.is_synonym 
                     : language_Entry.is_accept
 
-                if (item.results["SINONIMO"]){
-                    new_accept[language_Entry.synonyms] = item.results["SINONIMO"].map(item => item["scientificname"]).join(", ");
+                if (item[language_Entry.synonyms].length > 0){
+                    new_accept[language_Entry.synonyms] = item[language_Entry.synonyms]
                 }
 
-                let hierarchy = item.results["higherclassification"].split(";")
-                new_accept[language_Entry.family] = hierarchy[2].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                new_accept[language_Entry.family] = item[language_Entry.family]
 
                 let regExp = /\(([^)]+)\)/g;
                 let regiao = ["Sul", "Sudeste", "Norte", "Nordeste", "CentroOeste"]
@@ -154,6 +165,7 @@ const FDBget = async (search_name) => {
                 new_accept[language_FDB.distribution] = distribuicao.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 new_accept[language_FDB.possible_distribution] = distribuicao2.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
 
+                let hierarchy = item.results["higherclassification"].split(";")
                 new_accept[language_FDB.taxonomic_group] = hierarchy[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
                 new_accept[language_FDB.life_form] = item.details["formaVida"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -165,7 +177,7 @@ const FDBget = async (search_name) => {
 
                 new_accept[language_FDB.phytogeographic_domains] = item.details["dominioFitogeografico"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                 new_accept[language_FDB.vegetation] = item.details["tipoVegetacao"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-            }
+            }                
             resolve(new_accept)
         })
     })

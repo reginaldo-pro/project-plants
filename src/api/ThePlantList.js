@@ -3,28 +3,27 @@ import axios from "axios";
 import Papa from "papaparse";
 import most_accurate from '../classifying_input'
 import {language_Entry} from "../language/PTBR";
+import { getSpeciesAndAuthor } from "./index";
 
 const JSSoup = require('jssoup').default;
 
-const TPLInsertOrUpdate = async (entry_name, obj) => {
-    return db.TPL.findOne({entry_name: entry_name}).then(data => {
-        if (!data) {
-            return db.TPL.insert(obj)
-        } else {
-            return db.TPL.update({entry_name: entry_name}, obj).then(d => {
-                return db.TPL.findOne({entry_name: entry_name}).then(data => {
-                    return data
-                })
-            })
-        }
-    })
+const TPLInsertOrUpdate = async (obj) => {
+    let key = {}
+    key[language_Entry.search_name] =  obj[language_Entry.search_name]
+    key[language_Entry.found_name] =  obj[language_Entry.found_name]
+    key[language_Entry.accepted_name] =  obj[language_Entry.accepted_name]
 
-
+    return db.TPL.findOne(key)
+        .then(data => {
+            if (!data) {
+                return db.TPL.insert(obj)
+            } 
+        })
 };
 
 
-const _TPLCorrection = (entry_name) => {
-    const consulta_taxon_name = "http://www.theplantlist.org/tpl1.1/search?q=" + entry_name + "&csv=true"
+const _TPLCorrection = (search_name) => {
+    const consulta_taxon_name = "http://www.theplantlist.org/tpl1.1/search?q=" + search_name + "&csv=true"
 
     return axios.get(consulta_taxon_name)
         .then(response => {
@@ -36,8 +35,8 @@ const _TPLCorrection = (entry_name) => {
                 .filter(e => (e.ID !== "" && (e["Taxonomic status in TPL"] === "Accepted" || e["Taxonomic status in TPL"] === "Synonym")))
                 
             let index = most_accurate(result.map(e => {
-                return e['Genus'] + " " + e['Species'] + " " + e['Authorship']
-            }), entry_name)
+                return getSpeciesAndAuthor(e['Genus'] + " " + e['Species'] + " " + e['Infraspecific rank'] + " " + e['Infraspecific epithet'] + " " + e['Authorship']).join(' ')
+            }), search_name)
 
             if (index >= 0){
                 return Promise.resolve(result[index])
@@ -51,38 +50,38 @@ const _TPLCorrection = (entry_name) => {
         })
 } 
 
-const _TPLSearch = (entry_name) => {
-    return _TPLCorrection(entry_name)
-        .then(result => {
+const _TPLSearch = (search_name) => {
+    return _TPLCorrection(search_name)
+        .then(result => {            
             if (result){
-                if (result["Taxonomic status in TPL"] === "Accepted") {                    
-                    let consulta_taxon_fixa_publica = 'http://www.theplantlist.org/tpl1.1/record/' + result['ID'] + '?ref=tpl2'
+                if (result["Taxonomic status in TPL"] === "Accepted") {                                  
+                    let consulta_taxon_fixa_publica = 'http://www.theplantlist.org/tpl1.1/record/' + result['ID'] + '?ref=tpl2'                    
                     return axios.get(consulta_taxon_fixa_publica)
                         .then(response => {
                             let soup = new JSSoup(response.data)
-                            let syn_list = soup.find('tbody').contents.map(item => {                                     
-                                var _last_one = item.contents[0].contents[0].contents[0].contents.length - 1
-                                var _name = item.contents[0].getText(' ')                                        
-                                var _author = item.contents[0].contents[0].contents[0].contents[_last_one].getText(' ')
-                                _name = _name.replace(_author, "(" + _author.trim() + ")")                                
-                                return {
-                                    entry_name: entry_name,
-                                    accept: _name,
-                                    synonym: item.contents[1].getText() ? entry_name : item.contents[1].getText(),
-                                    result: null
-                                }
-                            })
-
-                            let infra_epi = result['Infraspecific epithet'].trim().length > 0 
-                                ? (result['Infraspecific rank'].trim() + " " + result['Infraspecific epithet'].trim() + " ")
-                                : ""                            
-                            syn_list.push({
-                                entry_name: entry_name,
-                                accept: result['Genus'] + " " + result['Species'] + " " + infra_epi + result['Authorship'],
-                                synonym: null,
-                                result: result
-                            })                            
-                            return Promise.resolve(syn_list)
+                            let syn_list = soup.find('tbody').contents
+                                .map(item => {                                     
+                                    var _last_one = item.contents[0].contents[0].contents[0].contents.length - 1
+                                    var _name = item.contents[0].getText(' ')                                        
+                                    var _author = item.contents[0].contents[0].contents[0].contents[_last_one].getText(' ')
+                                    _name = _name.replace(_author, "(" + _author.trim() + ")")     
+                                                     
+                                    if (item.contents[1].getText().trim() === "Synonym"){
+                                        return getSpeciesAndAuthor(_name).join(' ')
+                                    }                                    
+                                })
+                                .reduce((a, c) => c ? a + ", " + c : a)
+                                    
+                            let obj = {}
+                            obj[language_Entry.search_name] = search_name
+                            obj[language_Entry.found_name] = getSpeciesAndAuthor(result['Genus'] + " " + result['Species'] + " " + result['Infraspecific rank'] + " " + result['Infraspecific epithet'] + " " + result['Authorship']).join(' ')
+                            obj[language_Entry.accepted_name] = obj[language_Entry.found_name]
+                            obj[language_Entry.synonyms] = syn_list
+                            obj[language_Entry.family] = soup.findAll('i', 'family')[0].getText().trim()
+                            obj["results"] = result
+                            obj["details"] = soup.find('tbody').getText(' ')
+                                                  
+                            return Promise.resolve(obj)
                         })
                 } else {
                     let consulta_taxon_fixa_publica = 'http://www.theplantlist.org/tpl1.1/record/' + result['Accepted ID'] + '?ref=tpl2'
@@ -95,14 +94,16 @@ const _TPLSearch = (entry_name) => {
                                 ? (result['Infraspecific rank'].trim() + " " + result['Infraspecific epithet'].trim() + " ")
                                 : ""   
                             
-                            return Promise.resolve(
-                                [{
-                                    entry_name: entry_name,
-                                    accept: result['Genus'] + " " + result['Species'] + " " + infra_epi + result['Authorship'],
-                                    synonym: complete_name,
-                                    result: result
-                                }]
-                            )
+                            let obj = {}
+                            obj[language_Entry.search_name] = search_name
+                            obj[language_Entry.found_name] = getSpeciesAndAuthor(result['Genus'] + " " + result['Species'] + " " + result['Infraspecific rank'] + " " + result['Infraspecific epithet'] + " " + result['Authorship']).join(' ')
+                            obj[language_Entry.accepted_name] = getSpeciesAndAuthor(soup.findAll('h1')[1].find('span', {'class': 'name'}).getText(' ')).join(' ')
+                            obj[language_Entry.synonyms] = []
+                            obj[language_Entry.family] = soup.findAll('i', 'family')[0].getText().trim()
+                            obj["results"] = result
+                            obj["details"] = soup.contents[1].getText(' ')
+                                                    
+                            return Promise.resolve(obj)
                         })                
                 }
             }
@@ -112,18 +113,18 @@ const _TPLSearch = (entry_name) => {
         })
 }
 
-const TPLSearch = (entry_name) => {
-    return db.TPL.findOne({entry_name: entry_name}).then(data => {
+const TPLSearch = (search_name) => {
+    let key = {}
+    key[language_Entry.search_name] = search_name
+    
+    return db.TPL.findOne(key).then(data => {
         if (data) {
             return Promise.resolve(data)
         } else {
-            return _TPLSearch(entry_name)
-                .then(data => {                    
+            return _TPLSearch(search_name)
+                .then(data => {                                        
                     if (data){
-                        return TPLInsertOrUpdate(entry_name, {...data, entry_name: entry_name})
-                    }
-                    else {
-                        return Promise.resolve(null)
+                        return TPLInsertOrUpdate(data)
                     }
                 })
         }
@@ -133,28 +134,40 @@ const TPLSearch = (entry_name) => {
 const TPLfind = async (obj) => {
     return db.TPL.findOne(obj)
 }
-const TPLget = async (entry_name) => {
+
+const TPLget = async (search_name) => {
     return new Promise(resolve => {
         let new_accept = {
-            [language_Entry.scientific_name]: '',
+            [language_Entry.search_name]: search_name,
+            [language_Entry.found_name]: '',
+            [language_Entry.accepted_name]: '',
+            [language_Entry.synonyms]: '',
             [language_Entry.taxonomic_status]: '',
-            [language_Entry.scientific_name_authorship]: '',
-            [language_Entry.family]: '',
-            [language_Entry.synonym]: ''
-        };
-        db.TPL.findOne(entry_name).then(item => {
-            if (item) {
-                new_accept[language_Entry.synonym] = item.record.map(e => e.name).join(', ');
+            [language_Entry.family]: ''
+            
+        }
 
-                new_accept[language_Entry.family] = item.accept.Family;
+        let key = {}
+        key[language_Entry.search_name] = search_name
 
-                new_accept[language_Entry.scientific_name] = item.accept['Genus'] + " " + item.accept['Species'];
-                new_accept[language_Entry.scientific_name_authorship] = item.accept['Authorship'];
-                new_accept[language_Entry.search] = new_accept[language_Entry.search] + " [" + (item.synonym ? language_Entry.is_synonym : language_Entry.is_accept) + "]"
-                new_accept[language_Entry.taxonomic_status] = (item.synonym == null)? language_Entry.is_accept: language_Entry.is_synonym;
-            }
-            resolve(new_accept)
-        })
+        db.TPL.findOne(key)
+            .then(item => {
+                if (item) {
+                    new_accept[language_Entry.search_name] = item[language_Entry.search_name]
+                    new_accept[language_Entry.found_name] = item[language_Entry.found_name]
+                    new_accept[language_Entry.accepted_name] = item[language_Entry.accepted_name]
+
+                    new_accept[language_Entry.taxonomic_status] = (item[language_Entry.accepted_name] !== item[language_Entry.found_name]) 
+                        ? language_Entry.is_synonym 
+                        : language_Entry.is_accept
+
+                    if (item[language_Entry.synonyms].length > 0){
+                        new_accept[language_Entry.synonyms] = item[language_Entry.synonyms]
+                    }                    
+                    new_accept[language_Entry.family] = item[language_Entry.family] 
+                }
+                resolve(new_accept)              
+            })
     })
 }
 

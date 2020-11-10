@@ -32,9 +32,8 @@
                     <th scope="row">{{ items[item][0].entry_name }}</th>
                     <th scope="row">{{ item }}</th>
                     <th scope="row">{{ items[item][0].accepted_name }}</th>
-                    <th scope="row">{{ items[item].length }}</th>
+                    <th scope="row">{{ itemsCount[item] }}</th>
                     <th scope="row"><a href="#" v-on:click.stop="toCSV(item)">Baixar apenas este</a></th>
-
                 </tr>
                 </tbody>
             </table>
@@ -50,6 +49,7 @@
     import Papa from "papaparse";
     import {downloadOcorrenceGBIF, dropDBGBIF} from "../../api/GBIF";
     import {downloadOcorrenceSPLINK, dropSpLDB} from "../../api/Splink";
+    import { language_Entry } from '../../language/PTBR';
 
 
     const NodeGeocoder = require('node-geocoder');
@@ -75,7 +75,7 @@
                 statusProces: "Iniciando download de ocorrências.",
                 csv: "",
                 items: {},
-                prepared_items: [],
+                itemsCount: {},
                 header: []
             }
         },
@@ -155,28 +155,33 @@
                                 if (this.header.length === 0)
                                     this.header = ["Nome procurado", "Nome encontrado", "Nome aceito", "Numero de ocorrencias", "Baixar"];
                                 this.spTotal = sp_list.length * 2
-
+                                
                                 let down_gbif =  sp_list.reduce((accumulatorPromise, single_sp) =>{
                                     return accumulatorPromise
                                         .then(() => {
                                             return sleep(1000)
                                         })    
-                                        .then(() => {
+                                        .then(() => {                                            
                                             return downloadOcorrenceGBIF(single_sp)   
                                         })                                          
-                                        .then(results => {
-                                            this.statusProces = "Download de ocorrências de " + single_sp.entry_name + " no GBIF realizado com sucesso!"
+                                        .then(results => {                                              
+                                            this.statusProces = "Download de ocorrências de " + single_sp[language_Entry.search_name] + " no GBIF realizado com sucesso!"
                                             results
                                                 .filter(e => e !== undefined)
-                                                .map(single_ocur => {                                            
-                                                        this.occurFeitas += 1                                                        
-                                                        delete single_ocur._id;
-                                                        delete single_ocur.updatedAt;
-                                                        delete single_ocur.createdAt;
-                                                        if (this.items[single_ocur.found_name] === undefined){
-                                                            this.items[single_ocur.found_name] = []                                         
-                                                        } 
-                                                        this.items[single_ocur.found_name].push(single_ocur)
+                                                .map(single_ocur => {       
+                                                    this.occurFeitas += 1 
+                                                    delete single_ocur._id;
+                                                    delete single_ocur.updatedAt;
+                                                    delete single_ocur.createdAt;
+
+                                                    if (this.items[single_ocur.found_name] === undefined){
+                                                        this.items[single_ocur.found_name] = []         
+                                                        this.itemsCount[single_ocur.found_name] = 0                                
+                                                    } 
+                                                    this.items[single_ocur.found_name].push(single_ocur)
+                                                    if (single_ocur.found_name !== ''){
+                                                        this.itemsCount[single_ocur.found_name] = this.itemsCount[single_ocur.found_name] + 1
+                                                    }
                                                 })   
                                             return Promise.resolve(true)                                                     
                                         })
@@ -191,19 +196,18 @@
                                             this.spFeitas += 1
                                         })
                                 }, Promise.resolve())
-                                
-                               
+                                                              
                                 let new_sp_list = []                            
                                 for (var i = 0; i<sp_list.length; i+=10){
                                     new_sp_list[i/10] = sp_list.slice(i, (i+10))
-                                }
-
+                                }         
+        
                                 let down_spl = new_sp_list.reduce((accumulatorPromise, multiple_sp) => {
                                     return accumulatorPromise
                                         .then(() => {
-                                            multiple_sp.forEach(single_sp => {
-                                                if (this.items[single_sp.entry_name] === undefined){
-                                                    this.items[single_sp.entry_name] = [] 
+                                            multiple_sp.forEach(single_sp => {                                                
+                                                if (this.items[single_sp.found_name] === undefined){
+                                                    this.items[single_sp.found_name] = [] 
                                                 }
                                             }); 
                                             return sleep(5000)
@@ -211,7 +215,7 @@
                                         .then(() => {
                                             return downloadOcorrenceSPLINK(multiple_sp)
                                         })
-                                        .then(results => {
+                                        .then(results => {                                            
                                             this.statusProces = "Download de ocorrências de " + multiple_sp.length + " éspécies no SpLink realizado com sucesso!"
                                             results.forEach(ocor_sp =>{
                                                     ocor_sp.map(single_ocur => {    
@@ -220,8 +224,13 @@
                                                         delete single_ocur.updatedAt;
                                                         delete single_ocur.createdAt;
                                                         if (this.items[single_ocur.found_name] === undefined){
-                                                            this.items[single_ocur.found_name] = []                                         } 
+                                                            this.items[single_ocur.found_name] = []  
+                                                            this.itemsCount[single_ocur.found_name] = 0
+                                                        }                                   
                                                         this.items[single_ocur.found_name].push(single_ocur)
+                                                        if (single_ocur.found_name !== ''){
+                                                            this.itemsCount[single_ocur.found_name] = this.itemsCount[single_ocur.found_name] + 1
+                                                        }
                                                     }) 
                                                 })
                                             return Promise.resolve(true)                                                    

@@ -4,6 +4,7 @@ import axios from "axios";
 import Papa from "papaparse";
 import e from "express";
 import { getSpeciesAndAuthor } from "./index";
+import { language_Entry } from "../language/PTBR";
 
 
 const insertOC = async (item) => {
@@ -40,32 +41,35 @@ const insertOcorrenciasSPLINK = (entry) => {
 }
 
 const SPLINKUtils = (entry_name, array) => {
-    let entry_name_without_author = getSpeciesAndAuthor(entry_name.entry_name)[0] //entry_name.replace(/[(].*[)]/, '').trim()
+    let entry_name_without_author = getSpeciesAndAuthor(entry_name[language_Entry.search_name])[0] 
     let entries = array
         .filter(e => e !== null)
-        .map(e => {
-            let res_entry_name = getSpeciesAndAuthor(e.scientificName + ' (' + e.scientificNameAuthorship + ')').join(' ')
+        .map(e => {            
+            let res_entry_name = getSpeciesAndAuthor(e.scientificName + " " + e.infraspecificEpithet + ' (' + e.scientificNameAuthorship + ')').join(' ')
 
-            if (!res_entry_name.includes(entry_name_without_author)){
-                return
+            if (res_entry_name.includes(entry_name_without_author)){                
+                let res = {
+                    "entry_name": entry_name[language_Entry.search_name],
+                    "found_name": res_entry_name,
+                    "accepted_name": entry_name[language_Entry.accepted_name],
+                    "base de dados": 'SPLINK',
+                    'familia': e.family,
+                    'pais': e.country,
+                    'year': e.year,
+                    'month': e.month ,
+                    'day': e.day,
+                    'lat': String(e.decimalLatitude).trim() !== '' ? parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+                    'long': String(e.decimalLongitude).trim() !== '' ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+                }
+                return res
             }
-            let res = {
-                "entry_name": getSpeciesAndAuthor(entry_name.entry_name).join(' '),
-                "found_name": res_entry_name,
-                "accepted_name": getSpeciesAndAuthor(entry_name.accepted_name).join(' '),
-                "base de dados": 'SPLINK',
-                'familia': e.family,
-                'pais': e.country,
-                'year': e.year,
-                'month': e.month ,
-                'day': e.day,
-                'lat': String(e.decimalLatitude).trim() !== '' ? parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
-                'long': String(e.decimalLongitude).trim() !== '' ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
-            }
-            return res
         })    
         .filter(e => e !== undefined)
-        .filter(e => e['lat']!=="" || e['long']!=="")  
+        .filter(e => e['lat']!=="" || e['long']!=="")
+
+    if (entries.length === 0){
+        entries.push({entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:''})
+    }
 
     const set = new Set(entries.map(item => JSON.stringify(item)));
     const dedup = [...set].map(item => JSON.parse(item));
@@ -76,22 +80,22 @@ const OccorrenceSPLINKInsert = (multi_entry_names) => {
     return new Promise((resolve,reject) => {
         let all_find = []
         multi_entry_names.forEach(entry_name => {
-            all_find.push(db.ocorrenciasSPLINK.find({entry_name: entry_name.entry_name}))
+            all_find.push(db.ocorrenciasSPLINK.find({entry_name: entry_name[language_Entry.search_name]}))
         })
 
         Promise.all(all_find)
-            .then(ocor_locais => {   
+            .then(ocor_locais => {        
                 ocor_locais = ocor_locais.filter(e => e.length > 0)       
                 let names  = multi_entry_names.map(e =>{
-                    return (getSpeciesAndAuthor(e.entry_name)[0])
+                    return (getSpeciesAndAuthor(e[language_Entry.search_name])[0])
                 })
 
-                let all_sp = []   
+                let all_sp = []                
                 _download(encodeURI(names.join("/")))
                     .then(data => {
-                        for (var sp_name of multi_entry_names) {
-                            console.log(sp_name)
-                            console.log("----")
+                        for (var sp_name of multi_entry_names) {                            
+                            console.log(sp_name[language_Entry.search_name])
+                            console.log("SPL----")                            
                             let res = SPLINKUtils(sp_name, data)
                             if (res.length>0){                                
                                 all_sp.push(insertOcorrenciasSPLINK(res))                                    
@@ -132,9 +136,9 @@ const downloadOcorrenceSPLINK = (multi_entry_names) => {
             return Promise.resolve(data)
         })
         .catch(error => {
-            console.log("Erro no download do SPL para a espécie: " + multi_entry_names)
+            console.log("Erro no download do SPL para a espécie: " + multi_entry_names.map(e => e[language_Entry.found_name]))
             console.log(error)
-            return Promise.reject(new Error("Erro no download do SPL para a espécie: " + multi_entry_names))
+            return Promise.reject(new Error("Erro no download do SPL para a espécie: " + multi_entry_names.map(e => e[language_Entry.found_name])))
         })
 };
 

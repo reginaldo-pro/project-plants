@@ -456,7 +456,6 @@
                 new Promise(resolve => {
                     FDBfind({entry_name: name}).then(data => {
                         if (data) {
-
                             FDBget(name).then((item) => {
                                 resolve(item)
                             })

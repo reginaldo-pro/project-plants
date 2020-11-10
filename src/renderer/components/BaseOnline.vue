@@ -132,14 +132,14 @@ import { language_Entry } from '../../language/PTBR';
                 })
             },
             load_FDB(search_name) {
-                return FDBget(search_name).then(item => {                    
+                return FDBget(search_name).then(item => {          
                     this.header = Object.keys(item)                    
                     return item
                 });
 
             },
-            load_TPL(obj) {
-                return TPLget({entry_name: obj.name}).then(item => {
+            load_TPL(search_name) {
+                return TPLget(search_name).then(item => {
                     this.header = Object.keys(item);
                     return item
                 })
@@ -167,18 +167,18 @@ import { language_Entry } from '../../language/PTBR';
                             let b = this["load_" + this.site_b](entry.name)                            
 
                             Promise.all([a,b]).then(results => {                                
-                                var [SITE_A, SITE_B] = results                                
-                                if ((!SITE_A || SITE_A[language_Entry.taxonomic_status].includes('Nao encontrado') || SITE_A[language_Entry.taxonomic_status] === '') && (!SITE_B || SITE_B['Status taxonômico'].includes('Nao encontrado') || SITE_B['Status taxonômico'] === '')) {
+                                var [SITE_A, SITE_B] = results                                            
+                                if ((!SITE_A || SITE_A[language_Entry.taxonomic_status] === '') && (!SITE_B || SITE_B[language_Entry.taxonomic_status] === '')) {
                                     this.items.push({
                                                     "Nome Pesquisado": entry.name,
                                                     "Status taxonômico": "[" + this.site_a + "] [" + this.site_b + "] Nao encontrado"
                                                 })
-                                } else if (!SITE_A || SITE_A[language_Entry.taxonomic_status].includes('Nao encontrado') || SITE_A[language_Entry.taxonomic_status] === ''){
+                                } else if (!SITE_A || SITE_A[language_Entry.taxonomic_status] === ''){
                                     this.items.push({
                                                     "Nome Pesquisado": entry.name,
                                                     "Status taxonômico": "[" + this.site_a + "] Nao encontrado."
                                                 })
-                                } else if (!SITE_B || SITE_B[language_Entry.taxonomic_status].includes('Nao encontrado') || SITE_B[language_Entry.taxonomic_status] === ''){
+                                } else if (!SITE_B || SITE_B[language_Entry.taxonomic_status] === ''){
                                      this.items.push({
                                                     "Nome Pesquisado": entry.name,
                                                     "Status taxonômico": "[" + this.site_b + "] Nao encontrado."
@@ -190,8 +190,8 @@ import { language_Entry } from '../../language/PTBR';
                     } else if (this.site_a !== "None"){
                         data.forEach(entry => {                            
                             let a = this["load_" + this.site_a](entry.name);
-                            a.then((SITE_A) => {         
-                                if (SITE_A[language_Entry.taxonomic_status].includes('Nao encontrado') || SITE_A[language_Entry.taxonomic_status] === ''){                                    
+                            a.then((SITE_A) => {   
+                                if (SITE_A[language_Entry.taxonomic_status] === ''){                                    
                                     this.items.push({
                                                     "Nome Pesquisado": entry.name,
                                                     "Status taxonômico": "[" + this.site_a + "] Nao encontrado."
@@ -206,7 +206,7 @@ import { language_Entry } from '../../language/PTBR';
                         data.forEach(entry => {
                             let b = this["load_" + this.site_b](entry.name);
                             a.then((SITE_B) => {
-                                if (SITE_B[language_Entry.taxonomic_status].includes('Nao encontrado') || SITE_B[language_Entry.taxonomic_status] === ''){
+                                if (SITE_B[language_Entry.taxonomic_status] === ''){
                                     this.items.push({
                                                     "Nome Pesquisado": entry.name,
                                                     "Status taxonômico": "[" + this.site_b + "] Nao encontrado."

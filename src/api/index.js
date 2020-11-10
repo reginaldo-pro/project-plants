@@ -201,34 +201,46 @@ const sleep = async (ms) => {
 
 const getSpDown = async (sps) => {
     let all_down = []
-
+    
     sps.forEach(entry => {
         all_down.push(FDBget(entry.name))
-        all_down.push(TPLget({entry_name: entry.name}))
+        all_down.push(TPLget(entry.name))
     })
-    return Promise.all(all_down).then(results => {
+    return Promise.all(all_down).then(results => {    
         let items = results
+            .filter(e => e !== null)
             .map(e => {
-                    let syns = e[language_Entry.synonym]    
-                    if (syns) {
-                        let res = e[language_Entry.synonym]
+                    let syns = e[language_Entry.synonyms]    
+                    let res = []
+                   
+                    if (syns) {                        
+                        res = e[language_Entry.synonyms]
                             .split(', ')
-                            .map(s => {
-                                return {entry_name:s, accepted_name:e[language_Entry.scientific_name] + ' ' + e[language_Entry.scientific_name_authorship]}
-                            })
-                            .concat({entry_name:e[language_Entry.scientific_name] + ' ' + e[language_Entry.scientific_name_authorship], accepted_name: e[language_Entry.scientific_name] + ' ' + e[language_Entry.scientific_name_authorship]})
-                        return res 
-                            
-                    }  
+                            .map(s => {  
+                                return {
+                                    [language_Entry.search_name] : getSpeciesAndAuthor(s)[0],
+                                    [language_Entry.found_name] : s,
+                                    [language_Entry.accepted_name] : e[language_Entry.accepted_name]
+                                }                             
+                            })                                                     
+                    } 
+                    
+                    let obj = {}
+                    obj[language_Entry.search_name] = getSpeciesAndAuthor(e[language_Entry.search_name])[0]
+                    obj[language_Entry.found_name] = e[language_Entry.found_name]
+                    obj[language_Entry.accepted_name] = e[language_Entry.accepted_name]
+
+                    res.push(obj)
+                    return res 
             })
-            .reduce((new_items, e) => {
-                if (!new_items){
-                    new_items = []
+            .reduce((a, c) => {                
+                if (!a){
+                    a = []
                 }
-                if (e){
-                    new_items = new_items.concat(e)
+                if (c){
+                    a = a.concat(c)
                 }
-                return new_items
+                return a
             })
 
         const set = new Set(items.map(item => JSON.stringify(item)))
@@ -241,9 +253,14 @@ const getSpeciesAndAuthor = (speciesStringName) => {
     var clear_str = speciesStringName
         .replace(/[{()}]/g, '')
         .replace(/\s\s+/g, ' ')
+    
+    if (clear_str.length<=0)
+        return ['', '']
+        
     var cap_words = clear_str.match(/(\b[A-Z.][A-Za-z.]+|\b[A-Z.]\b)/g)
     var author = ''
     var species = ''
+
     if (cap_words.length>1){
         var part_of_author = clear_str
             .split(cap_words[1])
@@ -263,7 +280,7 @@ const getSpeciesAndAuthor = (speciesStringName) => {
 
         author = "(" + cap_words[1].trim() + part_of_author + ")"
     } else {
-        species = clear_str.trim()
+        species = clear_str
     }
     
     return [species, author]

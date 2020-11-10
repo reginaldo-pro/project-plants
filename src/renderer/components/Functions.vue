@@ -57,8 +57,7 @@
             <h4>Exemplo de cruzamento de dados entre duas Base de dados</h4>
             <p>
                 Verificamos entre duas Base de dados se a Planta pesquisa e aceita nas duas bases, se a planta e um
-                sinônimo
-                ele mostra a planta aceita, se duas plantas for sinônimo ele verifica se as plantas aceita retornada são
+                sinônimo ele mostra a planta aceita, se duas plantas for sinônimo ele verifica se as plantas aceita retornada são
                 iguais.
             </p>
             <hr/>
@@ -104,9 +103,7 @@
                 </graph-pie>
             </div>
             <h4>Tabela de informações site </h4>
-            Tabela de informações do Flora do Brasil incluindo os sinônimos = preparamos essa tabela para verificar as
-            informações apenas no site Flora do Brasil. Assim, de acordo com cada espécie tem informações sobre elas. Se
-            puder extrair esses dados da forma como organizamos na tabela será ótimo.
+            Tabela de informações dos sinônimos.
 
             <table class="table text-center">
                 <thead>
@@ -231,18 +228,21 @@
                                         resolve(null)
                                 })       
                                 
-                            Promise.all([bases[0].req, bases[1].req])
-                                .then(item => {                                  
-                                    let FDBxTPL = 0;
+                            bases[0].req
+                                .then((fdb) => {
+                                    bases[1].req
+                                        .then((tpl) => {
+                                            let FDBxTPL = 0;
 
-                                    let a = this.relationx2(fdb, tpl);
-                                    for (let i = 0; i < a.length; i++)
-                                        this.relation.values[i] += a[i];
-                                    this.graph2 += 1;
+                                            let a = this.relationx2(fdb, tpl);
+                                            for (let i = 0; i < a.length; i++)
+                                                this.relation.values[i] += a[i];
+                                            this.graph2 += 1;
 
-                                    let condFDB = this.items[0].completedSteps === this.items[0].totalSteps;
-                                    let condTPL = this.items[1].completedSteps === this.items[1].totalSteps;
-                                    resolve(bases)
+                                            let condFDB = this.items[0].completedSteps === this.items[0].totalSteps;
+                                            let condTPL = this.items[1].completedSteps === this.items[1].totalSteps;
+                                            resolve(bases)
+                                        })
                                 })
                                 .catch(() => {
                                     resolve(null)
@@ -279,7 +279,7 @@
                         }
                     })
             },
-            load_TPL(obj) {
+            load_TPL(obj) {                
                 return TPLSearch(obj.name)
                     .then(item => {
                         if (item) {
@@ -307,7 +307,7 @@
                     }
                 })
             },
-            relationx2: function (a, b) {
+            relationx2: function (a, b) {                
                 let eq = a.status === b.status;
                 let eqSynonym = eq && a.status === this.synonym;
                 let eqAccept = eq && a.status === this.accept;

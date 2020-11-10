@@ -1,6 +1,7 @@
 import {TPLget} from "./ThePlantList";
 import {FDBget} from "./FloraDoBrazil";
 import {language_Entry, language_FDB, language_TPL} from "../language/PTBR";
+import { getSpeciesAndAuthor } from ".";
 
 Object.filter = (obj, predicate) =>
     Object.keys(obj)
@@ -22,9 +23,9 @@ const relation = (FDB, TPL) => {
 
     item["Status distintos"] = (FDB[language_Entry.taxonomic_status] !== TPL[language_Entry.taxonomic_status]);
 
-    item["Autores iguais"] = (FDB[language_Entry.scientific_name_authorship] === TPL[language_Entry.scientific_name_authorship]);
+    item["Autores iguais"] = (getSpeciesAndAuthor(FDB[language_Entry.accepted_name])[1] === getSpeciesAndAuthor(TPL[language_Entry.accepted_name])[1]);
 
-    item["Autores distintos"] = (FDB[language_Entry.scientific_name_authorship] !== TPL[language_Entry.scientific_name_authorship]);
+    item["Autores distintos"] = (getSpeciesAndAuthor(FDB[language_Entry.accepted_name])[1] !== getSpeciesAndAuthor(TPL[language_Entry.accepted_name])[1]);
 
 
     res = Object.filter(item, item => item === true)
@@ -33,37 +34,35 @@ const relation = (FDB, TPL) => {
     return arr.join(", ")
 }
 
-const getTPLxFDB = (entry_name) => {
-    return new Promise(resolve => {
+const getTPLxFDB = (search_name) => {
+    return new Promise(resolve => {        
         let new_accept = {
-            [language_Entry.search]: entry_name,
-            [language_Entry.scientific_name + ' ' + language_FDB.site]: '',
+            [language_Entry.search_name]: search_name,
+            [language_Entry.found_name + ' ' + language_FDB.site]: '',
+            [language_Entry.found_name + ' ' + language_TPL.site]: '', 
+            [language_Entry.accepted_name + ' ' + language_FDB.site]: '',
+            [language_Entry.accepted_name + ' ' + language_TPL.site]: '',
             [language_Entry.taxonomic_status + ' ' + language_FDB.site]: '',
-            [language_Entry.scientific_name_authorship + ' ' + language_FDB.site]: '',
-            [language_Entry.scientific_name + ' ' + language_TPL.site]: '',
-            [language_Entry.taxonomic_status + ' ' + language_TPL.site]: '',
-            [language_Entry.scientific_name_authorship + ' ' + language_TPL.site]: '',
-        };
+            [language_Entry.taxonomic_status + ' ' + language_TPL.site]: ''
+        }
 
+        let TPL = TPLget(search_name)
+        let FDB = FDBget(search_name)
 
-        let TPL = TPLget(entry_name);
+        FDB.then(item_fdb => {
+            TPL.then(item_tpl => {
+                new_accept[(language_Entry.accepted_name + ' ' + language_FDB.site)] = item_fdb[language_Entry.accepted_name];
+                new_accept[(language_Entry.found_name + ' ' + language_FDB.site)] = item_fdb[language_Entry.found_name]; 
+                new_accept[(language_Entry.taxonomic_status + ' ' + language_FDB.site)] = item_fdb[language_Entry.taxonomic_status];
 
-        let FDB = FDBget(entry_name);
+                new_accept[(language_Entry.accepted_name + ' ' + language_TPL.site)] = item_tpl[language_Entry.accepted_name];
+                new_accept[(language_Entry.found_name + ' ' + language_TPL.site)] = item_fdb[language_Entry.found_name]; 
+                new_accept[(language_Entry.taxonomic_status + ' ' + language_TPL.site)] = item_tpl[language_Entry.taxonomic_status];
+                
 
-        FDB.then(item => {
-            TPL.then(item2 => {
-                new_accept[(language_Entry.scientific_name + ' ' + language_FDB.site)] = item[language_Entry.scientific_name];
-                new_accept[(language_Entry.taxonomic_status + ' ' + language_FDB.site)] = item[language_Entry.taxonomic_status];
-                new_accept[(language_Entry.scientific_name_authorship + ' ' + language_FDB.site)] = item[language_Entry.scientific_name_authorship];
-
-                new_accept[(language_Entry.scientific_name + ' ' + language_TPL.site)] = item2[language_Entry.scientific_name];
-                new_accept[(language_Entry.taxonomic_status + ' ' + language_TPL.site)] = item2[language_Entry.taxonomic_status];
-                new_accept[(language_Entry.scientific_name_authorship + ' ' + language_TPL.site)] = item2[language_Entry.scientific_name_authorship];
-
-                new_accept["FDB x TPL"] = relation(item, item2);
+                new_accept["FDB x TPL"] = relation(item_fdb, item_tpl);
 
                 resolve(new_accept)
-
             })
         })
 
