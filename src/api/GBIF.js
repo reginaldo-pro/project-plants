@@ -90,17 +90,46 @@ const OccorrenceGBIFInsert = async (entry_name, usageKey) => {
                     if (found.length>0){
                         resolve(found)
                     }
-                    else {                    
-                        _download(usageKey, 0)           
-                            .then(data => {                            
-                                console.log(entry_name[language_Entry.search_name])
-                                console.log("GBIF----")
-                                let res = GBIFutils(entry_name, usageKey, data)    
-                                insertOcorrenciasGBIF(res)
-                                    .then((data) => {
-                                        resolve(data)
-                                    })
-                                })
+                    else {
+                        db.cacheOcorrenciasGBIF.find({usageKey: usageKey})
+                            .then(cachedData => {
+                                if (cachedData.length>0){
+                                    console.log(entry_name[language_Entry.search_name])
+                                    console.log("GBIF----")
+                                    let res = GBIFutils(entry_name, usageKey, cachedData)    
+                                    insertOcorrenciasGBIF(res)
+                                        .then((data) => {
+                                            resolve(data)
+                                        })
+                                }
+                                else {
+                                    _download(usageKey, 0)           
+                                        .then(async data => {  
+                                            let all_inserts = []                         
+                                            data = data
+                                                .map(e => {                                                
+                                                    e['usageKey'] = usageKey  
+                                                    return clearKeyNames(e)                                      
+                                                })
+
+                                            data
+                                                .map(e => {
+                                                    all_inserts.push(db.cacheOcorrenciasGBIF.insert(e))
+                                                })                                                
+                                            
+                                            Promise.all(all_inserts)
+                                                .then(insertedData => {  
+                                                    console.log(entry_name[language_Entry.search_name])
+                                                    console.log("GBIF ----") 
+                                                    let res = GBIFutils(entry_name, usageKey, insertedData)    
+                                                    insertOcorrenciasGBIF(res)
+                                                        .then((data) => {
+                                                            resolve(data)
+                                                        })                                               
+                                                })                                       
+                                        })
+                                }
+                            })  
                     }
                 })
                 .catch((e) => {
@@ -192,7 +221,6 @@ const loadCorrection = async (obj) => {
                         axios
                             .get(url)
                             .then(response => {                                
-                                //if (response.data.rank === 'SPECIES'){
                                     insertCorrectorGBIF({name: obj.name, correction: response.data}).then((data) => {
                                         getCorrectorGBIF(obj).then(data => {
                                             if (data.length > 0) {
@@ -204,10 +232,6 @@ const loadCorrection = async (obj) => {
                                     }).catch(() => {
                                         resolve(null)
                                     })
-                                //}
-                                //else {
-                                //    resolve(null)
-                                //}
                             }).catch(() => {
                             resolve(null)
                         })
@@ -236,6 +260,27 @@ const loadCorrectionOffline = async (obj) => {
         }
     })
 }
+
+const clearKeyNames = (o) => {
+    var key, destKey, build, value
+
+    build = {}        
+    for (key in o) {
+        value = o[key]
+        destKey = key
+
+        if (typeof value === "object") {
+            value = clearKeyNames(value)
+        } else {
+            if (String(key).includes('.')){                
+                destKey = key.replace(/\./g, '_')
+            }            
+        }       
+        build[destKey] = value 
+    }
+    return build
+}
+
 export {
     loadCorrection,
     loadCorrectionOffline,

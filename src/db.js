@@ -16,10 +16,11 @@ const db = {
 
     plantsGBIF: dbFactory('plantsGBIF.db'),
     ocorrenciasGBIF: dbFactory('ocorrenciasGBIF.db'),
+    cacheOcorrenciasGBIF: dbFactory('cacheOcorrenciasGBIF.db'),
     ocorrenciasSPLINK: dbFactory('ocorrenciasSPLINK.db'),
+    cacheOcorrenciasSPLINK: dbFactory('cacheOcorrenciasSPLINK.db'),
     correctorGBIF: dbFactory('correctorGBIF.db')
 };
-
 
 
 const dropDB = (dbName) => {
@@ -34,7 +35,9 @@ dropDB('FDB')
 dropDB('TPL')
 dropDB('plantsGBIF')
 dropDB('ocorrenciasGBIF')
+dropDB('cacheOcorrenciasGBIF')
 dropDB('ocorrenciasSPLINK')
+dropDB('cacheOcorrenciasSPLINK')
 dropDB('correctorGBIF')
 
 module.exports = db;
