@@ -69,7 +69,7 @@ const _TPLSearch = (search_name) => {
                                     _name = _name.replace(_author, "(" + _author.trim() + ")")     
                                                      
                                     if (item.contents[1].getText().trim() === "Synonym" && !_name.includes('[Invalid]') && !_name.includes('[Illegitimate]')){
-                                        return getSpeciesAndAuthor(_name).join(' ')
+                                        return getSpeciesAndAuthor(_name).join(' ').trim()
                                     }                                    
                                 })
                                 .filter(e => e !== undefined)
@@ -81,7 +81,7 @@ const _TPLSearch = (search_name) => {
                                     
                             let obj = {}
                             obj[language_Entry.search_name] = search_name
-                            obj[language_Entry.found_name] = getSpeciesAndAuthor(result['Genus'] + " " + result['Species'] + " " + result['Infraspecific rank'] + " " + result['Infraspecific epithet'] + " " + result['Authorship']).join(' ')
+                            obj[language_Entry.found_name] = getSpeciesAndAuthor(result['Genus'] + " " + result['Species'] + " " + result['Infraspecific rank'] + " " + result['Infraspecific epithet'] + " " + result['Authorship']).join(' ').trim()
                             obj[language_Entry.accepted_name] = obj[language_Entry.found_name]
                             obj[language_Entry.synonyms] = syn_list
                             obj[language_Entry.family] = soup.findAll('i', 'family')[0].getText().trim()
@@ -104,8 +104,8 @@ const _TPLSearch = (search_name) => {
                             
                             let obj = {}
                             obj[language_Entry.search_name] = search_name
-                            obj[language_Entry.found_name] = getSpeciesAndAuthor(result['Genus'] + " " + result['Species'] + " " + result['Infraspecific rank'] + " " + result['Infraspecific epithet'] + " " + result['Authorship']).join(' ')
-                            obj[language_Entry.accepted_name] = getSpeciesAndAuthor(soup.findAll('h1')[1].find('span', {'class': 'name'}).getText(' ')).join(' ')
+                            obj[language_Entry.found_name] = getSpeciesAndAuthor(result['Genus'] + " " + result['Species'] + " " + result['Infraspecific rank'] + " " + result['Infraspecific epithet'] + " " + result['Authorship']).join(' ').trim()
+                            obj[language_Entry.accepted_name] = getSpeciesAndAuthor(soup.findAll('h1')[1].find('span', {'class': 'name'}).getText(' ')).join(' ').trim()
                             obj[language_Entry.synonyms] = []
                             obj[language_Entry.family] = soup.findAll('i', 'family')[0].getText().trim()
                             obj["results"] = result

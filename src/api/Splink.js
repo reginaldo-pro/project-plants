@@ -45,14 +45,14 @@ const SPLINKUtils = (entry_name, array) => {
     let entries = array
         .filter(e => e !== null)
         .map(e => {            
-            let res_entry_name = getSpeciesAndAuthor(e.scientificName + " " + e.infraspecificEpithet + ' (' + e.scientificNameAuthorship + ')').join(' ')
+            let res_entry_name = getSpeciesAndAuthor(e.scientificName + " " + e.infraspecificEpithet + ' (' + e.scientificNameAuthorship + ')').join(' ').trim()
 
             if (res_entry_name.includes(entry_name_without_author)){                
                 let res = {
                     "entry_name": entry_name[language_Entry.search_name],
                     "found_name": res_entry_name,
                     "accepted_name": entry_name[language_Entry.accepted_name],
-                    "base de dados": 'SPLINK',
+                    "base de dados": 'SPL',
                     'familia': e.family,
                     'pais': e.country,
                     'year': e.year,
@@ -68,7 +68,7 @@ const SPLINKUtils = (entry_name, array) => {
         .filter(e => e['lat']!=="" || e['long']!=="")
 
     if (entries.length === 0){
-        entries.push({entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:''})
+        entries.push({entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL'})
     }
 
     const set = new Set(entries.map(item => JSON.stringify(item)));

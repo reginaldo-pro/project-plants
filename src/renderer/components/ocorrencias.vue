@@ -28,9 +28,9 @@
                 </thead>
                 <tbody>
                 <tr v-for="(item, index) in Object.keys(items)" v-if="items[item].length >0" :key="index">
-                    <th scope="row">{{ index }}</th>
-                    <th scope="row">{{ items[item][0].entry_name }}</th>
-                    <th scope="row">{{ item }}</th>
+                    <th scope="row">{{ index + 1}}</th>
+                    <th scope="row">{{ (items[item][0].found_name.trim() === '' ) ? items[item][0].entry_name + " [" + items[item][0]["base de dados"] + "]" :  items[item][0].entry_name }}</th>
+                    <th scope="row">{{ items[item][0].found_name }}</th>
                     <th scope="row">{{ items[item][0].accepted_name }}</th>
                     <th scope="row">{{ itemsCount[item] }}</th>
                     <th scope="row"><a href="#" v-on:click.stop="toCSV(item)">Baixar apenas este</a></th>
@@ -104,12 +104,10 @@
                 window.location.reload()
             },
             toCSVAll: function () {
-                let items = Object.values(this.items).reduce((a, b) => {
-                    return a.concat(b)
-                }).map(item => {
-                    delete item.accept
-                    return item
-                }).filter(item => item);
+                let items = Object.values(this.items)
+                    .reduce((a, b) => {
+                        return a.concat(b)
+                    }).filter(item => item.found_name !== '')
 
                 let csv = Papa.unparse(items, {
                     quotes: true, //or array of booleans
@@ -174,12 +172,19 @@
                                                     delete single_ocur.updatedAt;
                                                     delete single_ocur.createdAt;
 
-                                                    if (this.items[single_ocur.found_name] === undefined){
-                                                        this.items[single_ocur.found_name] = []         
-                                                        this.itemsCount[single_ocur.found_name] = 0                                
-                                                    } 
-                                                    this.items[single_ocur.found_name].push(single_ocur)
-                                                    if (single_ocur.found_name !== ''){
+                                                    if (single_ocur.found_name.trim() === ''){
+                                                         if (this.items[single_ocur.entry_name + ' [GBIF]'] === undefined){
+                                                            this.items[single_ocur.entry_name + ' [GBIF]'] = []         
+                                                            this.itemsCount[single_ocur.entry_name + ' [GBIF]'] = 0                                                                                            
+                                                        }
+                                                        this.items[single_ocur.entry_name + ' [GBIF]'].push(single_ocur)
+                                                    }
+                                                    else {
+                                                        if (this.items[single_ocur.found_name] === undefined){
+                                                            this.items[single_ocur.found_name] = []         
+                                                            this.itemsCount[single_ocur.found_name] = 0                                                                                            
+                                                        }
+                                                        this.items[single_ocur.found_name].push(single_ocur)
                                                         this.itemsCount[single_ocur.found_name] = this.itemsCount[single_ocur.found_name] + 1
                                                     }
                                                 })   
@@ -205,11 +210,11 @@
                                 let down_spl = new_sp_list.reduce((accumulatorPromise, multiple_sp) => {
                                     return accumulatorPromise
                                         .then(() => {
-                                            multiple_sp.forEach(single_sp => {                                                
-                                                if (this.items[single_sp.found_name] === undefined){
-                                                    this.items[single_sp.found_name] = [] 
-                                                }
-                                            }); 
+                                            // multiple_sp.forEach(single_sp => {                                                
+                                            //     if (this.items[single_sp.found_name] === undefined){
+                                            //         this.items[single_sp.found_name] = [] 
+                                            //     }
+                                            // }); 
                                             return sleep(5000)
                                         })
                                         .then(() => {
@@ -223,12 +228,20 @@
                                                         delete single_ocur._id;
                                                         delete single_ocur.updatedAt;
                                                         delete single_ocur.createdAt;
-                                                        if (this.items[single_ocur.found_name] === undefined){
-                                                            this.items[single_ocur.found_name] = []  
-                                                            this.itemsCount[single_ocur.found_name] = 0
-                                                        }                                   
-                                                        this.items[single_ocur.found_name].push(single_ocur)
-                                                        if (single_ocur.found_name !== ''){
+                                                        
+                                                        if (single_ocur.found_name.trim() === ''){
+                                                            if (this.items[single_ocur.entry_name + ' [SPL]'] === undefined){
+                                                                this.items[single_ocur.entry_name + ' [SPL]'] = []         
+                                                                this.itemsCount[single_ocur.entry_name + ' [SPL]'] = 0                                                                                                
+                                                            }
+                                                            this.items[single_ocur.entry_name + ' [SPL]'].push(single_ocur)
+                                                        }
+                                                        else {
+                                                            if (this.items[single_ocur.found_name] === undefined){
+                                                                this.items[single_ocur.found_name] = []         
+                                                                this.itemsCount[single_ocur.found_name] = 0                                                                                               
+                                                            }
+                                                            this.items[single_ocur.found_name].push(single_ocur) 
                                                             this.itemsCount[single_ocur.found_name] = this.itemsCount[single_ocur.found_name] + 1
                                                         }
                                                     }) 

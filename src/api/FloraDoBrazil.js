@@ -47,25 +47,25 @@ const _FDBSearch = async (search_name) => {
                 return axios.get(consulta_taxon_fixa_publica + data["taxonid"], {cancelToken: cancelSource.token})
                     .then(response => {       
                         let accepted_name = (data["taxonomicstatus"] === "SINONIMO")
-                            ? getSpeciesAndAuthor(data["NOME ACEITO"][0].scientificname).join(' ')
-                            : getSpeciesAndAuthor(data["scientificname"]).join(' ')
+                            ? getSpeciesAndAuthor(data["NOME ACEITO"][0].scientificname).join(' ').trim()
+                            : getSpeciesAndAuthor(data["scientificname"]).join(' ').trim()
                         
                         if ((data["taxonomicstatus"] === "SINONIMO") && data["NOME ACEITO"].length>1){
                             accepted_name = data["NOME ACEITO"]
                                 .map(e  => {
-                                    return (getSpeciesAndAuthor(e["scientificname"]).join(' '))
+                                    return (getSpeciesAndAuthor(e["scientificname"]).join(' ').trim())
                                 })
                                 .reduce((a,c) => a + ", " + c)
                         }
 
                         let obj = {}
                         obj[language_Entry.search_name] = search_name
-                        obj[language_Entry.found_name] = getSpeciesAndAuthor(data["scientificname"]).join(' ')
+                        obj[language_Entry.found_name] = getSpeciesAndAuthor(data["scientificname"]).join(' ').trim()
                         obj[language_Entry.accepted_name] = accepted_name
 
                         if (data.SINONIMO && data.SINONIMO.length > 0){
                             obj[language_Entry.synonyms] = data.SINONIMO.map(e  => {
-                                return (getSpeciesAndAuthor(e["scientificname"]).join(' '))
+                                return (getSpeciesAndAuthor(e["scientificname"]).join(' ').trim())
                             })
                             .reduce((a,c) => a + ", " + c)
                         } 

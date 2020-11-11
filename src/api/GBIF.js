@@ -50,7 +50,7 @@ const GBIFutils = (entry_name, usageKey, array) => {
     let entries = array
         .filter(e => e != null)
         .map(e => {
-            let res_entry_name = getSpeciesAndAuthor(e['scientificName']).join(' ') 
+            let res_entry_name = getSpeciesAndAuthor(e['scientificName']).join(' ').trim()
 
             if (!res_entry_name.includes(entry_name_without_author)){
                 return
@@ -81,7 +81,7 @@ const GBIFutils = (entry_name, usageKey, array) => {
 const OccorrenceGBIFInsert = async (entry_name, usageKey) => {
     return new Promise((resolve, reject) => {   
         if (!usageKey || entry_name[language_Entry.accepted_name].trim() === ''){
-            resolve([{entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:''}])
+            resolve([{entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'GBIF',}])
         }
         else {
             db.ocorrenciasGBIF.find({usageKey: usageKey})
