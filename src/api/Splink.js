@@ -86,20 +86,27 @@ const OccorrenceSPLINKInsert = (multi_entry_names) => {
         Promise.all(all_find)
             .then(ocor_locais => {        
                 ocor_locais = ocor_locais.filter(e => e.length > 0)       
-                let names  = multi_entry_names.map(e =>{
-                    return (getSpeciesAndAuthor(e[language_Entry.search_name])[0])
-                })
+                let names  = multi_entry_names
+                    .map(e =>{
+                        if (e[language_Entry.accepted_name].trim() !== '')
+                            return (getSpeciesAndAuthor(e[language_Entry.search_name])[0])
+                    })
+                    .filter(e => e !== undefined)
 
                 let all_sp = []                
                 _download(encodeURI(names.join("/")))
                     .then(data => {
                         for (var sp_name of multi_entry_names) {                            
-                            console.log(sp_name[language_Entry.search_name])
-                            console.log("SPL----")                            
-                            let res = SPLINKUtils(sp_name, data)
-                            if (res.length>0){                                
-                                all_sp.push(insertOcorrenciasSPLINK(res))                                    
-                            }                    
+                            console.log("SPL---- " + sp_name[language_Entry.search_name])   
+                            if (sp_name[language_Entry.accepted_name].trim() !== ''){              
+                                let res = SPLINKUtils(sp_name, data)
+                                if (res.length>0){                                
+                                    all_sp.push(insertOcorrenciasSPLINK(res))                                    
+                                }      
+                            }
+                            else {
+                                all_sp.push(Promise.resolve([{entry_name: sp_name[language_Entry.search_name], found_name:'', accepted_name:''}]))
+                            }              
                         }
                         Promise.all(all_sp).then(e => {               
                             resolve(e)

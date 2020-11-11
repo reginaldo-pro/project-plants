@@ -209,7 +209,7 @@ const getSpDown = async (sps) => {
     return Promise.all(all_down).then(results => {    
         let items = results
             .filter(e => e !== null)
-            .map(e => {
+            .map(e => {                    
                     let syns = e[language_Entry.synonyms]    
                     let res = []
                    

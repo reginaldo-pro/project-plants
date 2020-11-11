@@ -265,7 +265,8 @@
             },
             load_FDB(obj) {
                 return FDBSearch(obj.name)
-                    .then(item => {                        
+                    .then(item => {  
+                      
                         if (item) {
                             return {
                                 status: (item[language_Entry.accepted_name] !== item[language_Entry.found_name] ? this.synonym : this.accept),

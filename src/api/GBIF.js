@@ -5,6 +5,7 @@ import * as db from "../db";
 import { cancelSource } from "./utils";
 import { sleep, getSpeciesAndAuthor } from "./index";
 import { language_Entry } from "../language/PTBR";
+import { Debugger } from "electron";
 
 const insertOC = async (item) => {
     return await db.ocorrenciasGBIF.insert(item)
@@ -54,7 +55,6 @@ const GBIFutils = (entry_name, usageKey, array) => {
             if (!res_entry_name.includes(entry_name_without_author)){
                 return
             }
-
             let res =  {
                 "entry_name": entry_name[language_Entry.search_name],
                 "found_name": res_entry_name,
@@ -66,8 +66,7 @@ const GBIFutils = (entry_name, usageKey, array) => {
                 'month': e.month ? e.month : '',
                 'day': e.day ? e.day : '',
                 'lat': String(e.decimalLatitude).trim() !== '' ? parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
-                'long': String(e.decimalLongitude).trim() !== '' ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
-                'usageKey': usageKey
+                'long': String(e.decimalLongitude).trim() !== '' ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : ''
             }
             return res
         })
@@ -81,7 +80,7 @@ const GBIFutils = (entry_name, usageKey, array) => {
 
 const OccorrenceGBIFInsert = async (entry_name, usageKey) => {
     return new Promise((resolve, reject) => {   
-        if (!usageKey){
+        if (!usageKey || entry_name[language_Entry.accepted_name].trim() === ''){
             resolve([{entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:''}])
         }
         else {
@@ -102,25 +101,18 @@ const OccorrenceGBIFInsert = async (entry_name, usageKey) => {
                                             resolve(data)
                                         })
                                 }
-                                else {
+                                else {                                    
                                     _download(usageKey, 0)           
-                                        .then(async data => {  
-                                            let all_inserts = []                         
+                                        .then(async data => {                        
                                             data = data
                                                 .map(e => {                                                
                                                     e['usageKey'] = usageKey  
                                                     return clearKeyNames(e)                                      
-                                                })
-
-                                            data
-                                                .map(e => {
-                                                    all_inserts.push(db.cacheOcorrenciasGBIF.insert(e))
-                                                })                                                
+                                                })                                            
                                             
-                                            Promise.all(all_inserts)
+                                            db.cacheOcorrenciasGBIF.insert(data)
                                                 .then(insertedData => {  
-                                                    console.log(entry_name[language_Entry.search_name])
-                                                    console.log("GBIF ----") 
+                                                    console.log("GBIF ---- " + entry_name[language_Entry.search_name])
                                                     let res = GBIFutils(entry_name, usageKey, insertedData)    
                                                     insertOcorrenciasGBIF(res)
                                                         .then((data) => {
@@ -143,7 +135,7 @@ const OccorrenceGBIFInsert = async (entry_name, usageKey) => {
 const _download = (taxon_key, offset = 0) => {
     return new Promise((resolve, reject) => {
             let url = "https://api.gbif.org/v1/occurrence/search"
-
+            Debugger
             axios.get(url, {
                 cancelToken: cancelSource.token,
                 params: {
@@ -186,10 +178,10 @@ const _download = (taxon_key, offset = 0) => {
 
 const downloadOcorrenceGBIF = (entry_name) => {
     return loadCorrection({name: entry_name[language_Entry.search_name]})
-        .then(data => {           
-            let correction = (data['correction']['matchType'] === "NONE")
-                ? null
-                : data['correction']['usageKey']
+        .then(data => {                       
+            let correction = (data && (data['correction']['matchType']))
+                ? data['correction']['usageKey']
+                : null
 
             return OccorrenceGBIFInsert(entry_name, correction)
                     .then(data => { 
@@ -217,21 +209,26 @@ const loadCorrection = async (obj) => {
                     if (data.length > 0) {
                         resolve(data[0])
                     } else {
-                        let url = "https://api.gbif.org/v1/species/match?name=" + obj.name;
+                        let url = "https://api.gbif.org/v1/species/match?name=" + obj.name + "&strict=true";
+                        //let url = "https://api.gbif.org/v1/species/search?q=" + obj.name + "&rank=SPECIES"
                         axios
                             .get(url)
-                            .then(response => {                                
-                                    insertCorrectorGBIF({name: obj.name, correction: response.data}).then((data) => {
-                                        getCorrectorGBIF(obj).then(data => {
-                                            if (data.length > 0) {
-                                                resolve(data[0])
-                                            } else {
-                                                resolve(null)
-                                            }
-                                        })
-                                    }).catch(() => {
-                                        resolve(null)
+                            .catch(error => reject(error))
+                            .then(response => {                                          
+                                if (!response.data || (response.data.matchType && response.data.matchType !== "EXACT")){
+                                    resolve(null)
+                                }
+                                insertCorrectorGBIF({name: obj.name, correction: response.data}).then((data) => {
+                                    getCorrectorGBIF(obj).then(data => {
+                                        if (data.length > 0) {
+                                            resolve(data[0])
+                                        } else {
+                                            resolve(null)
+                                        }
                                     })
+                                }).catch(() => {
+                                    resolve(null)
+                                })
                             }).catch(() => {
                             resolve(null)
                         })

@@ -29,7 +29,7 @@ const _TPLCorrection = (search_name) => {
         .then(response => {
             let data = Papa.parse(response.data, {
                 header: true
-            });
+            })
             
             let result = data.data
                 .filter(e => (e.ID !== "" && (e["Taxonomic status in TPL"] === "Accepted" || e["Taxonomic status in TPL"] === "Synonym")))
@@ -52,7 +52,7 @@ const _TPLCorrection = (search_name) => {
 
 const _TPLSearch = (search_name) => {
     return _TPLCorrection(search_name)
-        .then(result => {       
+        .then(result => {   
             if (result){                
                 if (result["Taxonomic status in TPL"] === "Accepted") {                                  
                     let consulta_taxon_fixa_publica = 'http://www.theplantlist.org/tpl1.1/record/' + result['ID'] + '?ref=tpl2'                    
@@ -68,10 +68,11 @@ const _TPLSearch = (search_name) => {
                                     var _author = item.contents[0].contents[0].contents[0].contents[_last_one].getText(' ')
                                     _name = _name.replace(_author, "(" + _author.trim() + ")")     
                                                      
-                                    if (item.contents[1].getText().trim() === "Synonym"){
+                                    if (item.contents[1].getText().trim() === "Synonym" && !_name.includes('[Invalid]') && !_name.includes('[Illegitimate]')){
                                         return getSpeciesAndAuthor(_name).join(' ')
                                     }                                    
                                 })
+                                .filter(e => e !== undefined)
                                 .reduce((a, c) => c ? a + ", " + c : a)
                             }
                             else {
@@ -159,7 +160,7 @@ const TPLget = async (search_name) => {
 
         db.TPL.findOne(key)
             .then(item => {
-                if (item) {
+                if (item) {                                        
                     new_accept[language_Entry.search_name] = item[language_Entry.search_name]
                     new_accept[language_Entry.found_name] = item[language_Entry.found_name]
                     new_accept[language_Entry.accepted_name] = item[language_Entry.accepted_name]

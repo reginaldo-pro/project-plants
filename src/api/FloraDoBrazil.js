@@ -30,7 +30,7 @@ const _FDBSearch = async (search_name) => {
     const consulta_taxon_fixa_publica = 'http://floradobrasil.jbrj.gov.br/reflora/listaBrasil/ConsultaPublicaUC/ResultadoDaConsultaCarregaTaxonGrupo.do?&idDadosListaBrasil='
 
     return  consulta_taxon_name.get(search_name, {cancelToken: cancelSource.token})
-        .then(response => {
+        .then(response => {            
             let result = response.data.result
             let data = null
 
@@ -97,7 +97,8 @@ const FDBSearch = async (search_name) => {
                 return Promise.resolve(data)
             } else {
                 return _FDBSearch(search_name)
-                    .then(data => {                        
+                    .then(data => {              
+          
                         if (data){
                             return FDBInsertOrUpdate(data)
                         }
@@ -128,7 +129,6 @@ const FDBget = async (search_name) => {
 
         let key = {}
         key[language_Entry.search_name] = search_name
-        
         db.FDB.findOne(key).then(item => {          
             if (item) {          
                 new_accept[language_Entry.search_name] = item[language_Entry.search_name]

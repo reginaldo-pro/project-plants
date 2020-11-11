@@ -28,7 +28,7 @@
                 </thead>
                 <tbody>
                 <tr v-for="(item, index) in Object.keys(items)" v-if="items[item].length >0" :key="index">
-                    <th scope="row">{{ index + 1}}</th>
+                    <th scope="row">{{ index }}</th>
                     <th scope="row">{{ items[item][0].entry_name }}</th>
                     <th scope="row">{{ item }}</th>
                     <th scope="row">{{ items[item][0].accepted_name }}</th>
@@ -146,7 +146,7 @@
             },
             loadPage(csv) {
                 getEntries({fileName: csv})
-                    .then(data => {              
+                    .then(data => {                                      
                         this.spTotal = 0
                         this.spFeitas = 0
 
