@@ -119,11 +119,19 @@
                     skipEmptyLines: false,
                     columns: null
                 });
+                
                 let hiddenElement = document.createElement('a');
-                hiddenElement.href = 'data:text/csv,' + encodeURI(csv);
+                var blob = new Blob([csv], { type: 'data:text/csv;charset=utf-8;' }) //type: "octet/stream"
+                var url = URL.createObjectURL(blob);
+
+                hiddenElement.href = URL.createObjectURL(blob);
                 hiddenElement.target = '_blank';
-                hiddenElement.download = "Todas as ocorrencias '" + this.csv + "'.csv";
+                hiddenElement.style.visibility = 'hidden';
+                hiddenElement.download = "Ocorrencias _" + this.csv.replace(".csv", "") + "_.csv";
+                document.body.appendChild(hiddenElement)
                 hiddenElement.click();
+                document.body.removeChild(hiddenElement)
+                URL.revokeObjectURL(blob) 
             },
             toCSV: function (name) {
                 let csv = Papa.unparse(this.items[name], {
@@ -137,10 +145,17 @@
                     columns: null
                 });
                 let hiddenElement = document.createElement('a');
-                hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+                var blob = new Blob([encodeURI(csv)], { type: 'data:text/csv;charset=utf-8;' });
+                var url = URL.createObjectURL(blob);
+
+                hiddenElement.href = URL.createObjectURL(blob);
                 hiddenElement.target = '_blank';
-                hiddenElement.download = "Ocorrencias '" + name + "'.csv";
+                hiddenElement.style.visibility = 'hidden';
+                hiddenElement.download = "Ocorrencias _" + name + "_.csv";
+                document.body.appendChild(hiddenElement)
                 hiddenElement.click();
+                document.body.removeChild(hiddenElement)
+                URL.revokeObjectURL(blob)           
             },
             loadPage(csv) {
                 getEntries({fileName: csv})
@@ -210,11 +225,6 @@
                                 let down_spl = new_sp_list.reduce((accumulatorPromise, multiple_sp) => {
                                     return accumulatorPromise
                                         .then(() => {
-                                            // multiple_sp.forEach(single_sp => {                                                
-                                            //     if (this.items[single_sp.found_name] === undefined){
-                                            //         this.items[single_sp.found_name] = [] 
-                                            //     }
-                                            // }); 
                                             return sleep(5000)
                                         })
                                         .then(() => {

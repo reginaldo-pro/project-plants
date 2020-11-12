@@ -84,7 +84,7 @@ const OccorrenceSPLINKInsert = (multi_entry_names) => {
         })
 
         Promise.all(all_find)
-            .then(ocor_locais => {        
+            .then(ocor_locais => {                        
                 ocor_locais = ocor_locais.filter(e => e.length > 0)       
                 let names  = multi_entry_names
                     .map(e =>{
@@ -93,9 +93,14 @@ const OccorrenceSPLINKInsert = (multi_entry_names) => {
                     })
                     .filter(e => e !== undefined)
 
-                let all_sp = []                
+                if (names.length===0){
+                    var res = (multi_entry_names.map(e => ({entry_name: e[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL',}))) 
+                    return resolve(res)
+                }    
+
+                let all_sp = []            
                 _download(encodeURI(names.join("/")))
-                    .then(data => {
+                    .then(data => {                        
                         for (var sp_name of multi_entry_names) {                            
                             console.log("SPL---- " + sp_name[language_Entry.search_name])   
                             if (sp_name[language_Entry.accepted_name].trim() !== ''){              
@@ -105,7 +110,7 @@ const OccorrenceSPLINKInsert = (multi_entry_names) => {
                                 }      
                             }
                             else {
-                                all_sp.push(Promise.resolve([{entry_name: sp_name[language_Entry.search_name], found_name:'', accepted_name:''}]))
+                                all_sp.push(Promise.resolve([{entry_name: sp_name[language_Entry.search_name], found_name:'', accepted_name:'', accepted_name:'', "base de dados": 'SPL'}]))
                             }              
                         }
                         Promise.all(all_sp).then(e => {               
