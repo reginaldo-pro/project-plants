@@ -145,7 +145,8 @@ const _download = async (sp_names) => {
 const downloadOcorrenceSPLINK = (multi_entry_names) => {
     return  OccorrenceSPLINKInsert(multi_entry_names)
         .then(data => {    
-            return Promise.resolve(data)
+            let res = data.filter(e => e !== undefined)
+            return Promise.resolve(res)
         })
         .catch(error => {
             console.log("Erro no download do SPL para a espécie: " + multi_entry_names.map(e => e[language_Entry.found_name]))

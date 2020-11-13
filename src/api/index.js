@@ -12,7 +12,20 @@ const insertEntry = async (entry) => {
 const getEntries = (cond) => {   
     let entries =  db.entry.find(cond)
         .then(data => {
-            return data.filter(e => e.name !== '')
+            let entries = data
+                .filter(e => e.name !== '')
+                .map(e => {
+                    return (
+                        {
+                            name: e.name.trim(),
+                            filename: e.fileName.trim()
+                        }
+                    )
+                })
+               
+            const set = new Set(entries.map(item => JSON.stringify(item)));
+            const dedup = [...set].map(item => JSON.parse(item));
+            return dedup
         })
         .catch(reject => {
             console.log("Erro na busca no BD de espécies e sinoníminas já baixadas!")

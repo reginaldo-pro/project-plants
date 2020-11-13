@@ -188,7 +188,7 @@
                                                     delete single_ocur.createdAt;
 
                                                     if (single_ocur.found_name.trim() === ''){
-                                                         if (this.items[single_ocur.entry_name + ' [GBIF]'] === undefined){
+                                                        if (this.items[single_ocur.entry_name + ' [GBIF]'] === undefined){
                                                             this.items[single_ocur.entry_name + ' [GBIF]'] = []         
                                                             this.itemsCount[single_ocur.entry_name + ' [GBIF]'] = 0                                                                                            
                                                         }

@@ -203,15 +203,15 @@
                             bases[0].req = this.load_FDB(
                                 { name: entry.name }
                             )
-                                .then(item =>{
+                                .then(item =>{                                    
                                     let status_tag = {[this.accept]: 0, [this.synonym]: 1, ['']: 2};
                                     this.status.values[0][status_tag[item.status]] += 1;
                                     this.graph += 1;
                                     this.items[0].completedSteps += 1;
                                     return item    
                                 })
-                                .catch(() => {
-                                        resolve(null)
+                                .catch((e) => {                                    
+                                    resolve(null)
                                 })
                             
                             bases[1].req = this.load_TPL(
@@ -225,7 +225,7 @@
                                     return item    
                                 })
                                 .catch(() => {
-                                        resolve(null)
+                                    resolve(null)
                                 })       
                                 
                             bases[0].req
@@ -263,10 +263,9 @@
                 if (b) return Math.round((b / this.relation.values.reduce((a, b) => a + b, 0)) * 100) + "%";
                 return a;
             },
-            load_FDB(obj) {
+            load_FDB(obj) {                
                 return FDBSearch(obj.name)
                     .then(item => {  
-                      
                         if (item) {
                             return {
                                 status: (item[language_Entry.accepted_name] !== item[language_Entry.found_name] ? this.synonym : this.accept),
@@ -308,24 +307,25 @@
                     }
                 })
             },
-            relationx2: function (a, b) {                
-                let eq = a.status === b.status;
-                let eqSynonym = eq && a.status === this.synonym;
-                let eqAccept = eq && a.status === this.accept;
+            relationx2: function (a, b) {       
+                let eq = (a && b) ? a.status === b.status : false
+                let eqSynonym = (a && b) ? eq && a.status === this.synonym : false
+                let eqAccept = (a && b ) ? eq && a.status === this.accept : false
+                let eqName = (a && b) ? a.name === b.name : false
 
-                if (eqAccept || eqSynonym && a.name === b.name)
+                if (eqAccept || eqSynonym && eqName)
                     return [1, 0, 0, 0, 0];
 
-                if (eqSynonym && a.name !== b.name)
+                if (eqSynonym && !eqName)
                     return [1, 0, 0, 0, 0];
 
-                if (!eq && a.status && b.status)
+                if (!eq && a && b)
                     return [0, 1, 0, 0, 0];
 
-                if (!eq && !a.status && b.status)
+                if (!eq && !a && b)
                     return [0, 0, 1, 0, 0];
 
-                if (!eq && a.status && !b.status)
+                if (!eq && a && !b)
                     return [0, 0, 0, 1, 0];
 
                 return [0, 0, 0, 0, 1]

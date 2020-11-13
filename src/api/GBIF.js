@@ -152,7 +152,10 @@ const _download = (taxon_key, offset = 0) => {
                     let results = data['results']
                     let finished = data['endOfRecords']  
                     
-                    console.log("[GBIF] Download de: " + results.length + " ocorrências. (" + taxon_key + ")")
+                    if (results)
+                        console.log("[GBIF] Download de: " + results.length + " ocorrências. (" + taxon_key + ")")
+                    else 
+                    console.log("[GBIF] Download de ocorrências. (" + taxon_key + ")")
 
                     if (finished){
                         resolve(results)
@@ -188,7 +191,8 @@ const downloadOcorrenceGBIF = (entry_name) => {
                         return Promise.all(data)
                     })
                     .then(data => {
-                        return Promise.resolve(data.filter(e => e !== undefined))
+                        let res = data.filter(e => e !== undefined)
+                        return Promise.resolve(res)
                     })
                     .catch(error => {
                         console.log("Erro no download do GBIF para a espécie: " + entry_name[language_Entry.search_name])

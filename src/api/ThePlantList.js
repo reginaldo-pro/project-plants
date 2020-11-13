@@ -61,18 +61,23 @@ const _TPLSearch = (search_name) => {
                             let syn_list = soup.find('tbody')
                             
                             if (syn_list){
-                                syn_list = syn_list.contents.map(item => {                                     
-                                    var _last_one = item.contents[0].contents[0].contents[0].contents.length - 1
-                                    var _name = item.contents[0].getText(' ')                                        
-                                    var _author = item.contents[0].contents[0].contents[0].contents[_last_one].getText(' ')
-                                    _name = _name.replace(_author, "(" + _author.trim() + ")")     
-                                                     
-                                    if (item.contents[1].getText().trim() === "Synonym" && !_name.includes('[Invalid]') && !_name.includes('[Illegitimate]')){
-                                        return getSpeciesAndAuthor(_name).join(' ').trim()
-                                    }                                    
-                                })
-                                .filter(e => e !== undefined)
-                                .reduce((a, c) => c ? a + ", " + c : a)
+                                syn_list = syn_list.contents
+                                    .map(item => {
+                                        var _last_one = item.contents[0].contents[0].contents[0].contents.length - 1
+                                        var _name = item.contents[0].getText(' ')                                        
+                                        var _author = item.contents[0].contents[0].contents[0].contents[_last_one].getText(' ')
+                                        _name = _name.replace(_author, "(" + _author.trim() + ")")     
+                                                        
+                                        if (item.contents[1].getText().trim() === "Synonym" && !_name.includes('[Invalid]') && !_name.includes('[Illegitimate]')){
+                                            return getSpeciesAndAuthor(_name).join(' ').trim()
+                                        }         
+                                                                
+                                    })    
+                                    .filter(e => e !== undefined)
+                                
+                                if (syn_list.length>0){
+                                    syn_list = syn_list.reduce((a, c) => (c ? a + ", " + c : a))
+                                }
                             }
                             else {
                                 syn_list = []
@@ -128,9 +133,10 @@ const TPLSearch = (search_name) => {
             return Promise.resolve(data)
         } else {
             return _TPLSearch(search_name)
-                .then(data => {                              
+                .then(data => {       
+
                     if (data){
-                        console.log("TPL >--- " + data[language_Entry.found_name])
+                        console.log("TPL >--- " + search_name)
                         return TPLInsertOrUpdate(data)
                     }
                 })

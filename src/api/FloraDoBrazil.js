@@ -30,7 +30,7 @@ const _FDBSearch = async (search_name) => {
     const consulta_taxon_fixa_publica = 'http://floradobrasil.jbrj.gov.br/reflora/listaBrasil/ConsultaPublicaUC/ResultadoDaConsultaCarregaTaxonGrupo.do?&idDadosListaBrasil='
 
     return  consulta_taxon_name.get(search_name, {cancelToken: cancelSource.token})
-        .then(response => {            
+        .then(response => { 
             let result = response.data.result
             let data = null
 
@@ -45,17 +45,24 @@ const _FDBSearch = async (search_name) => {
             }   
             if (data) {
                 return axios.get(consulta_taxon_fixa_publica + data["taxonid"], {cancelToken: cancelSource.token})
-                    .then(response => {       
-                        let accepted_name = (data["taxonomicstatus"] === "SINONIMO")
-                            ? getSpeciesAndAuthor(data["NOME ACEITO"][0].scientificname).join(' ').trim()
-                            : getSpeciesAndAuthor(data["scientificname"]).join(' ').trim()
-                        
-                        if ((data["taxonomicstatus"] === "SINONIMO") && data["NOME ACEITO"].length>1){
-                            accepted_name = data["NOME ACEITO"]
-                                .map(e  => {
-                                    return (getSpeciesAndAuthor(e["scientificname"]).join(' ').trim())
-                                })
-                                .reduce((a,c) => a + ", " + c)
+                    .then(response => {    
+                        let accepted_name = ''
+
+                        if ((data["taxonomicstatus"] === "SINONIMO")){
+                            if (data["NOME ACEITO"]){
+                                if (data["NOME ACEITO"].length === 1){
+                                    accepted_name = getSpeciesAndAuthor(data["NOME ACEITO"][0].scientificname).join(' ').trim()
+                                }
+                                else if (data["NOME ACEITO"].length > 1){
+                                    accepted_name = data["NOME ACEITO"]
+                                        .map(e  => {
+                                            return (getSpeciesAndAuthor(e["scientificname"]).join(' ').trim())
+                                        })
+                                        .reduce((a,c) => a + ", " + c)  
+                                }
+                            }
+                        } else {
+                            accepted_name = getSpeciesAndAuthor(data["scientificname"]).join(' ').trim()
                         }
 
                         let obj = {}
@@ -97,8 +104,8 @@ const FDBSearch = async (search_name) => {
                 return Promise.resolve(data)
             } else {
                 return _FDBSearch(search_name)
-                    .then(data => {              
-                        console.log("FDB >--- " + data[language_Entry.found_name])
+                    .then(data => {           
+                        console.log("FDB >--- " + search_name)
                         if (data){
                             return FDBInsertOrUpdate(data)
                         }
@@ -142,7 +149,6 @@ const FDBget = async (search_name) => {
                 if (item[language_Entry.synonyms].length > 0){
                     new_accept[language_Entry.synonyms] = item[language_Entry.synonyms]
                 }
-
                 new_accept[language_Entry.family] = item[language_Entry.family]
 
                 let regExp = /\(([^)]+)\)/g;
@@ -153,8 +159,8 @@ const FDBget = async (search_name) => {
                     let txt1 = item.details["distribuicaoGeograficaCerteza" + i]
                     let txt2 = item.details["distribuicaoGeograficaDuvida" + i]
 
-                    let matches1 = txt1.match(regExp);
-                    let matches2 = txt2.match(regExp);
+                    let matches1 = (txt1) ? txt1.match(regExp) : ''
+                    let matches2 = (txt2) ? txt2.match(regExp) : ''
                     if (matches1) {
                         distribuicao = distribuicao.concat(matches1[0].substring(1, matches1[0].length - 1).split(','))
                     }

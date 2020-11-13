@@ -78,7 +78,7 @@
                                 try {
                                     if (row.data) {
                                         var entry = {name: row.data[0], fileName: files.name}
-                                        if (entry.name !== "") {
+                                        if (entry.name.trim() !== "") {
                                             sp_entries.push(entry)                                            
                                         }
                                     }
@@ -93,7 +93,7 @@
                                             all_p.push(EntryInsertOrUpdate(e.name, e))
                                         }
                                     )
-                                    Promise.all(all_p).then(()=>{
+                                    Promise.all(all_p).then(()=> {
                                         insertOrUpdateCSV({fileName: files.name}).then(() => {
                                             resolve(files.name)
                                         })
