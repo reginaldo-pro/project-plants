@@ -21,7 +21,6 @@ const TPLInsertOrUpdate = async (obj) => {
         })
 };
 
-
 const _TPLCorrection = (search_name) => {
     const consulta_taxon_name = "http://www.theplantlist.org/tpl1.1/search?q=" + search_name + "&csv=true"
 
@@ -52,7 +51,7 @@ const _TPLCorrection = (search_name) => {
 
 const _TPLSearch = (search_name) => {
     return _TPLCorrection(search_name)
-        .then(result => {   
+        .then(result => {  
             if (result){                
                 if (result["Taxonomic status in TPL"] === "Accepted") {                                  
                     let consulta_taxon_fixa_publica = 'http://www.theplantlist.org/tpl1.1/record/' + result['ID'] + '?ref=tpl2'                    
@@ -88,7 +87,6 @@ const _TPLSearch = (search_name) => {
                             obj["results"] = result
                             obj["details"] = (soup.find('tbody')) ? soup.find('tbody').getText(' ') : []
                                  
-                            
                             return Promise.resolve(obj)
                         })
                 } else {
@@ -110,7 +108,7 @@ const _TPLSearch = (search_name) => {
                             obj[language_Entry.family] = soup.findAll('i', 'family')[0].getText().trim()
                             obj["results"] = result
                             obj["details"] = soup.contents[1].getText(' ')
-                                                
+                                      
                             return Promise.resolve(obj)
                         })                
                 }
@@ -132,6 +130,7 @@ const TPLSearch = (search_name) => {
             return _TPLSearch(search_name)
                 .then(data => {                              
                     if (data){
+                        console.log("TPL >--- " + data[language_Entry.found_name])
                         return TPLInsertOrUpdate(data)
                     }
                 })

@@ -206,7 +206,7 @@
                                             return Promise.resolve(true)                                                     
                                         })
                                         .catch(error => {
-                                                    this.spError.push(single_sp)
+                                                    this.spError.push(single_sp.search_name)
                                                     this.mostrarAlerta = true
                                                     console.log("Erro download de ocorrências!")
                                                     console.log(error)
@@ -259,7 +259,7 @@
                                             return Promise.resolve(true)                                                    
                                         })                                               
                                         .catch(error => {
-                                                    this.spError = this.spError.concat(multiple_sp)
+                                                    this.spError = this.spError.concat(multiple_sp.map(e => e.search_name + ", "))
                                                     this.mostrarAlerta = true
                                                     console.log("Erro download de ocorrências!")
                                                     console.log(error)

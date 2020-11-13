@@ -98,7 +98,7 @@ const FDBSearch = async (search_name) => {
             } else {
                 return _FDBSearch(search_name)
                     .then(data => {              
-          
+                        console.log("FDB >--- " + data[language_Entry.found_name])
                         if (data){
                             return FDBInsertOrUpdate(data)
                         }
