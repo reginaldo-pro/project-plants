@@ -47,8 +47,8 @@
     import ProgressBar from "vue-simple-progress";
     import {getEntries, getSpDown, sleep} from "../../api";
     import Papa from "papaparse";
-    import {downloadOcorrenceGBIF, dropDBGBIF} from "../../api/GBIF";
-    import {downloadOcorrenceSPLINK, dropSpLDB} from "../../api/Splink";
+    import { downloadOcorrenceGBIF, getGBIFOccurrences } from "../../api/GBIF";
+    import { downloadOcorrenceSPLINK, getSPLINKOccurrences } from "../../api/Splink";
     import { language_Entry } from '../../language/PTBR';
 
 
@@ -103,13 +103,74 @@
             reloadPage() {
                 window.location.reload()
             },
-            toCSVAll: function () {
-                let items = Object.values(this.items)
-                    .reduce((a, b) => {
-                        return a.concat(b)
-                    }).filter(item => item.found_name !== '')
+            toCSVAll2: function () {
+                Promise.all([getGBIFOccurrences(), getSPLINKOccurrences()])
+                    .then(occur => {
+                        let allOccurrences = []
+                        allOccurrences.push(...occur[0], ...occur[1])
+                        
+                        allOccurrences = allOccurrences 
+                            .filter(e => e.found_name !== '')
+                            .sort((currentElement, nextElement) => {
+                                if (currentElement.entry_name > nextElement.entry_name)
+                                    return 1 
+                                else if (currentElement.entry_name < nextElement.entry_name) 
+                                    return -1
+                                else {
+                                    if (currentElement.found_name > nextElement.found_name)
+                                        return 1
+                                    else if (currentElement.found_name > nextElement.found_name)
+                                        return -1
+                                    else {
+                                        if (currentElement.accepted_name > nextElement.accepted_name)
+                                            return 1
+                                        else if (currentElement.accepted_name > nextElement.accepted_name)
+                                            return -1
+                                        else
+                                            return 0
+                                    }
+                                }
+                            })
 
-                let csv = Papa.unparse(items, {
+                        const csv = Papa.unparse(allOccurrences, {
+                            quotes: true, //or array of booleans
+                            quoteChar: '"',
+                            escapeChar: '"',
+                            delimiter: ";",
+                            header: true,
+                            newline: "\r\n",
+                            skipEmptyLines: false,
+                            columns: null
+                        });
+                        
+                        let hiddenElement = document.createElement('a');
+                        const blob = new Blob([csv], { type: 'data:text/csv;charset=utf-8;' }) //type: "octet/stream"
+                        const url = URL.createObjectURL(blob);
+
+                        hiddenElement.href = URL.createObjectURL(blob);
+                        hiddenElement.target = '_blank';
+                        hiddenElement.style.visibility = 'hidden';
+                        hiddenElement.download = "Ocorrencias _" + this.csv.replace(".csv", "") + "_.csv";
+                        document.body.appendChild(hiddenElement)
+                        hiddenElement.click();
+                        document.body.removeChild(hiddenElement)
+                        URL.revokeObjectURL(blob) 
+                    })
+            },
+            toCSVAll: function () {
+                debugger
+                let allOccurrences = []
+                Object.values(this.items)
+                    .map(multipleOccur => {
+                        allOccurrences.push(...multipleOccur.filter(singleOccur => singleOccur.found_name !== ''))
+                    })
+
+                // let items = Object.values(this.items)
+                //     .reduce((a, b) => {
+                //         return a.concat(b)
+                //     }).filter(item => item.found_name !== '')
+
+                const csv = Papa.unparse(allOccurrences, {
                     quotes: true, //or array of booleans
                     quoteChar: '"',
                     escapeChar: '"',
@@ -121,8 +182,8 @@
                 });
                 
                 let hiddenElement = document.createElement('a');
-                var blob = new Blob([csv], { type: 'data:text/csv;charset=utf-8;' }) //type: "octet/stream"
-                var url = URL.createObjectURL(blob);
+                const blob = new Blob([csv], { type: 'data:text/csv;charset=utf-8;' }) //type: "octet/stream"
+                const url = URL.createObjectURL(blob);
 
                 hiddenElement.href = URL.createObjectURL(blob);
                 hiddenElement.target = '_blank';
@@ -145,8 +206,8 @@
                     columns: null
                 });
                 let hiddenElement = document.createElement('a');
-                var blob = new Blob([encodeURI(csv)], { type: 'data:text/csv;charset=utf-8;' });
-                var url = URL.createObjectURL(blob);
+                let blob = new Blob([encodeURI(csv)], { type: 'data:text/csv;charset=utf-8;' });
+                let url = URL.createObjectURL(blob);
 
                 hiddenElement.href = URL.createObjectURL(blob);
                 hiddenElement.target = '_blank';
@@ -195,12 +256,12 @@
                                                         this.items[single_ocur.entry_name + ' [GBIF]'].push(single_ocur)
                                                     }
                                                     else {
-                                                        if (this.items[single_ocur.found_name] === undefined){
-                                                            this.items[single_ocur.found_name] = []         
-                                                            this.itemsCount[single_ocur.found_name] = 0                                                                                            
+                                                        if (this.items[single_ocur.entry_name] === undefined){
+                                                            this.items[single_ocur.entry_name] = []         
+                                                            this.itemsCount[single_ocur.entry_name] = 0                                                                                            
                                                         }
-                                                        this.items[single_ocur.found_name].push(single_ocur)
-                                                        this.itemsCount[single_ocur.found_name] = this.itemsCount[single_ocur.found_name] + 1
+                                                        this.items[single_ocur.entry_name].push(single_ocur)
+                                                        this.itemsCount[single_ocur.entry_name] = this.itemsCount[single_ocur.entry_name] + 1
                                                     }
                                                 })   
                                             return Promise.resolve(true)                                                     
@@ -218,7 +279,7 @@
                                 }, Promise.resolve())
                                                               
                                 let new_sp_list = []                            
-                                for (var i = 0; i<sp_list.length; i+=10){
+                                for (let i = 0; i<sp_list.length; i+=10){
                                     new_sp_list[i/10] = sp_list.slice(i, (i+10))
                                 }         
         
@@ -247,12 +308,12 @@
                                                             this.items[single_ocur.entry_name + ' [SPL]'].push(single_ocur)
                                                         }
                                                         else {
-                                                            if (this.items[single_ocur.found_name] === undefined){
-                                                                this.items[single_ocur.found_name] = []         
-                                                                this.itemsCount[single_ocur.found_name] = 0                                                                                               
+                                                            if (this.items[single_ocur.entry_name] === undefined){
+                                                                this.items[single_ocur.entry_name] = []         
+                                                                this.itemsCount[single_ocur.entry_name] = 0                                                                                               
                                                             }
-                                                            this.items[single_ocur.found_name].push(single_ocur) 
-                                                            this.itemsCount[single_ocur.found_name] = this.itemsCount[single_ocur.found_name] + 1
+                                                            this.items[single_ocur.entry_name].push(single_ocur) 
+                                                            this.itemsCount[single_ocur.entry_name] = this.itemsCount[single_ocur.entry_name] + 1
                                                         }
                                                     }) 
                                                 })

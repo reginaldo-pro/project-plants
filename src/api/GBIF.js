@@ -263,7 +263,7 @@ const loadCorrectionOffline = async (obj) => {
 }
 
 const clearKeyNames = (o) => {
-    var key, destKey, build, value
+    let key, destKey, build, value
 
     build = {}        
     for (key in o) {
@@ -282,8 +282,13 @@ const clearKeyNames = (o) => {
     return build
 }
 
+const getGBIFOccurrences = () => {
+    return db.ocorrenciasSPLINK.find()
+}
+
 export {
     loadCorrection,
     loadCorrectionOffline,
-    downloadOcorrenceGBIF
+    downloadOcorrenceGBIF,
+    getGBIFOccurrences
 }

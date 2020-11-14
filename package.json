@@ -62,6 +62,7 @@
     "chart.js": "^2.9.3",
     "chowdown": "^1.2.5",
     "cors": "^2.8.5",
+    "csv-writer": "^1.6.0",
     "express": "latest",
     "finale-rest": "^1.1.1",
     "google-geocoder": "^0.2.1",

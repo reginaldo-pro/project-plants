@@ -94,14 +94,14 @@ const OccorrenceSPLINKInsert = (multi_entry_names) => {
                     .filter(e => e !== undefined)
 
                 if (names.length===0){
-                    var res = (multi_entry_names.map(e => ({entry_name: e[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL',}))) 
+                    let res = (multi_entry_names.map(e => ({entry_name: e[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL',}))) 
                     return resolve(res)
                 }    
 
                 let all_sp = []            
                 _download(encodeURI(names.join("/")))
                     .then(data => {                        
-                        for (var sp_name of multi_entry_names) {                            
+                        for (let sp_name of multi_entry_names) {                            
                             console.log("SPL---- " + sp_name[language_Entry.search_name])   
                             if (sp_name[language_Entry.accepted_name].trim() !== ''){              
                                 let res = SPLINKUtils(sp_name, data)
@@ -155,6 +155,12 @@ const downloadOcorrenceSPLINK = (multi_entry_names) => {
         })
 };
 
+
+const getSPLINKOccurrences = () => {
+    return db.ocorrenciasSPLINK.find()
+}
+
 export {
-    downloadOcorrenceSPLINK
+    downloadOcorrenceSPLINK,
+    getSPLINKOccurrences
 }

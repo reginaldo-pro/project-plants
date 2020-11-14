@@ -167,7 +167,7 @@ import { language_Entry } from '../../language/PTBR';
                             let b = this["load_" + this.site_b](entry.name)                            
 
                             Promise.all([a,b]).then(results => {                                
-                                var [SITE_A, SITE_B] = results                                            
+                                let [SITE_A, SITE_B] = results                                            
                                 if ((!SITE_A || SITE_A[language_Entry.taxonomic_status] === '') && (!SITE_B || SITE_B[language_Entry.taxonomic_status] === '')) {
                                     this.items.push({
                                                     "Nome Pesquisado": entry.name,

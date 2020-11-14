@@ -3,7 +3,7 @@ const brain = require('brain.js')
 
 
 function vec_result(res, num_classes) {
-    var i = 0,
+    let i = 0,
         vec = [];
     for (i; i < num_classes; i += 1) {
         vec.push(0);

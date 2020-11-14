@@ -77,7 +77,7 @@
                             step: row => {
                                 try {
                                     if (row.data) {
-                                        var entry = {name: row.data[0], fileName: files.name}
+                                        let entry = {name: row.data[0], fileName: files.name}
                                         if (entry.name.trim() !== "") {
                                             sp_entries.push(entry)                                            
                                         }

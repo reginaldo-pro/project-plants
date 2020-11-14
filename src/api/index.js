@@ -263,19 +263,19 @@ const getSpDown = async (sps) => {
 }
 
 const getSpeciesAndAuthor = (speciesStringName) => {
-    var clear_str = speciesStringName
+    let clear_str = speciesStringName
         .replace(/[{()}]/g, '')
         .replace(/\s\s+/g, ' ')
     
     if (clear_str.length<=0)
         return ['', '']
         
-    var cap_words = clear_str.match(/(\b[A-Z.][A-Za-z.]+|\b[A-Z.]\b)/g)
-    var author = ''
-    var species = ''
+    let cap_words = clear_str.match(/(\b[A-Z.][A-Za-z.]+|\b[A-Z.]\b)/g)
+    let author = ''
+    let species = ''
 
     if (cap_words.length>1){
-        var part_of_author = clear_str
+        let part_of_author = clear_str
             .split(cap_words[1])
             .map(w => w.trim())
             .filter(w => w !== '') 

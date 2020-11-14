@@ -39,7 +39,7 @@ const _FDBSearch = async (search_name) => {
                     data = result[0]
                 }
                 else if (result.length > 0){
-                    var index = most_accurate(result.map(item => item["scientificname"]), search_name)
+                    let index = most_accurate(result.map(item => item["scientificname"]), search_name)
                     data = result[index]
                 }                
             }   
