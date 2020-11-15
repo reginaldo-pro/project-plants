@@ -246,21 +246,6 @@ const loadCorrection = async (obj) => {
         }
     })
 }
-const loadCorrectionOffline = async (obj) => {
-    return new Promise(resolve => {
-        try {
-            getCorrectorGBIF({name: obj.name}).then((data) => {
-                if (data.length > 0) {
-                    resolve(data[0])
-                } else {
-                    resolve({})
-                }
-            })
-        } catch (e) {
-            return null
-        }
-    })
-}
 
 const clearKeyNames = (o) => {
     let key, destKey, build, value
@@ -282,13 +267,23 @@ const clearKeyNames = (o) => {
     return build
 }
 
-const getGBIFOccurrences = () => {
+const getGBIFOccurrences = async () => {
     return db.ocorrenciasSPLINK.find()
+        .then(occur => {
+            let res = occur
+                .map(e => {
+                        delete e['_id']
+                        delete e['createdAt']
+                        delete e['updatedAt']
+
+                        return e
+                })
+            return Promise.resolve(res)
+        })     
 }
 
 export {
     loadCorrection,
-    loadCorrectionOffline,
     downloadOcorrenceGBIF,
     getGBIFOccurrences
 }

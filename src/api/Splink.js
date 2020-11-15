@@ -41,31 +41,33 @@ const insertOcorrenciasSPLINK = (entry) => {
 }
 
 const SPLINKUtils = (entry_name, array) => {
-    let entry_name_without_author = getSpeciesAndAuthor(entry_name[language_Entry.search_name])[0] 
-    let entries = array
-        .filter(e => e !== null)
-        .map(e => {            
-            let res_entry_name = getSpeciesAndAuthor(e.scientificName + " " + e.infraspecificEpithet + ' (' + e.scientificNameAuthorship + ')').join(' ').trim()
+    let entry_name_without_author = getSpeciesAndAuthor(entry_name[language_Entry.search_name])[0]
 
-            if (res_entry_name.includes(entry_name_without_author)){                
-                let res = {
-                    "entry_name": entry_name[language_Entry.search_name],
-                    "found_name": res_entry_name,
-                    "accepted_name": entry_name[language_Entry.accepted_name],
-                    "base de dados": 'SPL',
-                    'familia': e.family,
-                    'pais': e.country,
-                    'year': e.year,
-                    'month': e.month ,
-                    'day': e.day,
-                    'lat': String(e.decimalLatitude).trim() !== '' ? parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
-                    'long': String(e.decimalLongitude).trim() !== '' ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
-                }
-                return res
+    let entries = array
+    .filter(e => e !== null)
+    .map(e => {         
+        debugger   
+        let res_entry_name = getSpeciesAndAuthor(e.scientificName +  ' (' + e.scientificNameAuthorship + ')').join(' ').trim()
+
+        if (res_entry_name.includes(entry_name_without_author)){                
+            let res = {
+                "entry_name": entry_name[language_Entry.search_name],
+                "found_name": res_entry_name,
+                "accepted_name": entry_name[language_Entry.accepted_name],
+                "base de dados": 'SPL',
+                'familia': e.family,
+                'pais': e.country,
+                'year': e.year,
+                'month': e.month ,
+                'day': e.day,
+                'lat': String(e.decimalLatitude).trim() !== '' ? parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+                'long': String(e.decimalLongitude).trim() !== '' ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
             }
-        })    
-        .filter(e => e !== undefined)
-        .filter(e => e['lat']!=="" || e['long']!=="")
+            return res
+        }
+    })    
+    .filter(e => e !== undefined)
+    .filter(e => e['lat']!=="" || e['long']!=="")
 
     if (entries.length === 0){
         entries.push({entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL'})
@@ -103,7 +105,7 @@ const OccorrenceSPLINKInsert = (multi_entry_names) => {
                     .then(data => {                        
                         for (let sp_name of multi_entry_names) {                            
                             console.log("SPL---- " + sp_name[language_Entry.search_name])   
-                            if (sp_name[language_Entry.accepted_name].trim() !== ''){              
+                            if (sp_name[language_Entry.accepted_name].trim() !== ''){          
                                 let res = SPLINKUtils(sp_name, data)
                                 if (res.length>0){                                
                                     all_sp.push(insertOcorrenciasSPLINK(res))                                    
@@ -128,21 +130,17 @@ const OccorrenceSPLINKInsert = (multi_entry_names) => {
 const _download = async (sp_names) => {
     return await new Promise((resolve,reject) => {
         axios.get(
-            'http://api.splink.org.br/records/ScientificName/' + sp_names + '/Synonyms/flora2020'
+            'http://api.splink.org.br/records/ScientificName/' + sp_names + '/Synonyms/flora2020/Format/JSON'
           ).then(response =>{
-                let res =  Papa.parse(response.data, {
-                    header: true
-                })
-                console.log("[SPL] Download de: " + res.data.length + " ocorrências.")
-              
-                resolve(res.data.filter(e => e.seq !== ''))
+                console.log("[SPL] Download de: " + response.data.result.length + " ocorrências.")
+                resolve(response.data.result)
           }).catch(er => {
               reject(er)
           })
     })    
 }
 
-const downloadOcorrenceSPLINK = (multi_entry_names) => {
+const downloadOcorrenceSPLINK = async (multi_entry_names) => {
     return  OccorrenceSPLINKInsert(multi_entry_names)
         .then(data => {    
             let res = data.filter(e => e !== undefined)
@@ -156,8 +154,19 @@ const downloadOcorrenceSPLINK = (multi_entry_names) => {
 };
 
 
-const getSPLINKOccurrences = () => {
+const getSPLINKOccurrences = async () => {
     return db.ocorrenciasSPLINK.find()
+        .then(occur => {
+            let res = occur
+                .map(e => {
+                        delete e['_id']
+                        delete e['createdAt']
+                        delete e['updatedAt']
+
+                        return e
+                })
+            return Promise.resolve(res)
+        }) 
 }
 
 export {

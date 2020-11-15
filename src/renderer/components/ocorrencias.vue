@@ -23,16 +23,15 @@
                 <thead>
                 <tr>
                     <th scope="col">#</th>
-                    <th scope="col" v-for="(item, index) in header">{{item}}</th>
+                    <th scope="col" v-for="(item, index) in header">{{ item }}</th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr v-for="(item, index) in Object.keys(items)" v-if="items[item].length >0" :key="index">
+                <tr v-for="(item, index) in Object.keys(items)" :key="index">
                     <th scope="row">{{ index + 1}}</th>
-                    <th scope="row">{{ (items[item][0].found_name.trim() === '' ) ? items[item][0].entry_name + " [" + items[item][0]["base de dados"] + "]" :  items[item][0].entry_name }}</th>
-                    <th scope="row">{{ items[item][0].found_name }}</th>
-                    <th scope="row">{{ items[item][0].accepted_name }}</th>
-                    <th scope="row">{{ itemsCount[item] }}</th>
+                    <th scope="row">{{ item }}</th>
+                    <th scope="row">{{ items[item].accepted_name }}</th>
+                    <th scope="row">{{ items[item].count }}</th>
                     <th scope="row"><a href="#" v-on:click.stop="toCSV(item)">Baixar apenas este</a></th>
                 </tr>
                 </tbody>
@@ -75,7 +74,6 @@
                 statusProces: "Iniciando download de ocorrências.",
                 csv: "",
                 items: {},
-                itemsCount: {},
                 header: []
             }
         },
@@ -103,7 +101,7 @@
             reloadPage() {
                 window.location.reload()
             },
-            toCSVAll2: function () {
+            toCSVAll: function () {
                 Promise.all([getGBIFOccurrences(), getSPLINKOccurrences()])
                     .then(occur => {
                         let allOccurrences = []
@@ -157,67 +155,6 @@
                         URL.revokeObjectURL(blob) 
                     })
             },
-            toCSVAll: function () {
-                debugger
-                let allOccurrences = []
-                Object.values(this.items)
-                    .map(multipleOccur => {
-                        allOccurrences.push(...multipleOccur.filter(singleOccur => singleOccur.found_name !== ''))
-                    })
-
-                // let items = Object.values(this.items)
-                //     .reduce((a, b) => {
-                //         return a.concat(b)
-                //     }).filter(item => item.found_name !== '')
-
-                const csv = Papa.unparse(allOccurrences, {
-                    quotes: true, //or array of booleans
-                    quoteChar: '"',
-                    escapeChar: '"',
-                    delimiter: ";",
-                    header: true,
-                    newline: "\r\n",
-                    skipEmptyLines: false,
-                    columns: null
-                });
-                
-                let hiddenElement = document.createElement('a');
-                const blob = new Blob([csv], { type: 'data:text/csv;charset=utf-8;' }) //type: "octet/stream"
-                const url = URL.createObjectURL(blob);
-
-                hiddenElement.href = URL.createObjectURL(blob);
-                hiddenElement.target = '_blank';
-                hiddenElement.style.visibility = 'hidden';
-                hiddenElement.download = "Ocorrencias _" + this.csv.replace(".csv", "") + "_.csv";
-                document.body.appendChild(hiddenElement)
-                hiddenElement.click();
-                document.body.removeChild(hiddenElement)
-                URL.revokeObjectURL(blob) 
-            },
-            toCSV: function (name) {
-                let csv = Papa.unparse(this.items[name], {
-                    quotes: true, //or array of booleans
-                    quoteChar: '"',
-                    escapeChar: '"',
-                    delimiter: ";",
-                    header: true,
-                    newline: "\r\n",
-                    skipEmptyLines: false,
-                    columns: null
-                });
-                let hiddenElement = document.createElement('a');
-                let blob = new Blob([encodeURI(csv)], { type: 'data:text/csv;charset=utf-8;' });
-                let url = URL.createObjectURL(blob);
-
-                hiddenElement.href = URL.createObjectURL(blob);
-                hiddenElement.target = '_blank';
-                hiddenElement.style.visibility = 'hidden';
-                hiddenElement.download = "Ocorrencias _" + name + "_.csv";
-                document.body.appendChild(hiddenElement)
-                hiddenElement.click();
-                document.body.removeChild(hiddenElement)
-                URL.revokeObjectURL(blob)           
-            },
             loadPage(csv) {
                 getEntries({fileName: csv})
                     .then(data => {                                      
@@ -227,7 +164,7 @@
                         getSpDown(data)
                             .then(sp_list => {
                                 if (this.header.length === 0)
-                                    this.header = ["Nome procurado", "Nome encontrado", "Nome aceito", "Numero de ocorrencias", "Baixar"];
+                                    this.header = ["Nome procurado", "Nome aceito", "Numero de ocorrencias", "Baixar"];
                                 this.spTotal = sp_list.length * 2
                                 
                                 let down_gbif =  sp_list.reduce((accumulatorPromise, single_sp) =>{
@@ -244,24 +181,11 @@
                                                 .filter(e => e !== undefined)
                                                 .map(single_ocur => {       
                                                     this.occurFeitas += 1 
-                                                    delete single_ocur._id;
-                                                    delete single_ocur.updatedAt;
-                                                    delete single_ocur.createdAt;
-
-                                                    if (single_ocur.found_name.trim() === ''){
-                                                        if (this.items[single_ocur.entry_name + ' [GBIF]'] === undefined){
-                                                            this.items[single_ocur.entry_name + ' [GBIF]'] = []         
-                                                            this.itemsCount[single_ocur.entry_name + ' [GBIF]'] = 0                                                                                            
-                                                        }
-                                                        this.items[single_ocur.entry_name + ' [GBIF]'].push(single_ocur)
-                                                    }
-                                                    else {
+                                                    if (single_ocur.found_name.trim() !== ''){
                                                         if (this.items[single_ocur.entry_name] === undefined){
-                                                            this.items[single_ocur.entry_name] = []         
-                                                            this.itemsCount[single_ocur.entry_name] = 0                                                                                            
-                                                        }
-                                                        this.items[single_ocur.entry_name].push(single_ocur)
-                                                        this.itemsCount[single_ocur.entry_name] = this.itemsCount[single_ocur.entry_name] + 1
+                                                            this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 1 }                                                                           
+                                                        }                                                        
+                                                        this.items[single_ocur.entry_name].count = this.items[single_ocur.entry_name].count + 1
                                                     }
                                                 })   
                                             return Promise.resolve(true)                                                     
@@ -296,24 +220,11 @@
                                             results.forEach(ocor_sp =>{
                                                     ocor_sp.map(single_ocur => {    
                                                         this.occurFeitas += 1                                                        
-                                                        delete single_ocur._id;
-                                                        delete single_ocur.updatedAt;
-                                                        delete single_ocur.createdAt;
-                                                        
-                                                        if (single_ocur.found_name.trim() === ''){
-                                                            if (this.items[single_ocur.entry_name + ' [SPL]'] === undefined){
-                                                                this.items[single_ocur.entry_name + ' [SPL]'] = []         
-                                                                this.itemsCount[single_ocur.entry_name + ' [SPL]'] = 0                                                                                                
-                                                            }
-                                                            this.items[single_ocur.entry_name + ' [SPL]'].push(single_ocur)
-                                                        }
-                                                        else {
+                                                        if (single_ocur.found_name.trim() !== ''){
                                                             if (this.items[single_ocur.entry_name] === undefined){
-                                                                this.items[single_ocur.entry_name] = []         
-                                                                this.itemsCount[single_ocur.entry_name] = 0                                                                                               
-                                                            }
-                                                            this.items[single_ocur.entry_name].push(single_ocur) 
-                                                            this.itemsCount[single_ocur.entry_name] = this.itemsCount[single_ocur.entry_name] + 1
+                                                                this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 1 }                                                                           
+                                                            }                                                        
+                                                            this.items[single_ocur.entry_name].count = this.items[single_ocur.entry_name].count + 1
                                                         }
                                                     }) 
                                                 })

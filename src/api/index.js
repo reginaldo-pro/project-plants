@@ -300,6 +300,35 @@ const getSpeciesAndAuthor = (speciesStringName) => {
 }
 
 
+const getSpeciesName = (speciesStringName) => {
+    return getSpeciesAndAuthor(speciesStringName)[0]
+}
+
+const getAuthorName = (speciesStringName) => {
+    return getSpeciesAndAuthor(speciesStringName)[1]
+}
+
+const removeInfraSpeciesRank = (speciesStringName) => {
+    return getSpeciesName(speciesStringName)
+        .split(' ')
+        .filter(e => (Object.values(infraSpeciesRank).indexOf(e) == -1 ? true : false))
+        .join(' ')
+}
+
+
+const infraSpeciesRank = {
+    SPECIES : "sp.",
+    INFRASPECIFIC_NAME : "infrasp.",
+    SUBSPECIES : "subsp.",
+    INFRASUBSPECIFIC : "infrasubsp.",
+    PROLES : "prol.",
+    RACE : "race",
+    VARIETY : "var.",
+    SUBVARIETY : "subvar.",
+    FORM : "f.",
+    SUBFORM : "subf."
+}
+
 export {
     insertEntry,
     getEntries,
@@ -313,5 +342,6 @@ export {
     insertCSV, getCSV, updateCSV, insertOrUpdateCSV,
     loadFDBOffline, loadGBIFOffline, loadTPLOffline, deleteCSV,
     sleep, getSpDown,
-    getSpeciesAndAuthor
+    getSpeciesAndAuthor, getSpeciesName, getAuthorName, removeInfraSpeciesRank, infraSpeciesRank
 }
+
