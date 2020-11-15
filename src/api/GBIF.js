@@ -3,7 +3,7 @@ import axios from "axios";
 import { trim } from "jquery";
 import * as db from "../db";
 import { cancelSource } from "./utils";
-import { sleep, getSpeciesAndAuthor } from "./index";
+import { sleep, getSpeciesAndAuthor, getSpeciesName, getSpeciesAndAuthorNames, removeInfraSpeciesRank } from "./index";
 import { language_Entry } from "../language/PTBR";
 import { Debugger } from "electron";
 
@@ -46,35 +46,38 @@ const getCorrectorGBIF = async (cond) => {
 }
 
 const GBIFutils = (entry_name, usageKey, array) => {
-    let entry_name_without_author = getSpeciesAndAuthor(entry_name[language_Entry.search_name])[0] 
+    let entry_name_without_author = getSpeciesName(entry_name[language_Entry.search_name]) 
     let entries = array
         .filter(e => e != null)
         .map(e => {
-            let res_entry_name = getSpeciesAndAuthor(e['scientificName']).join(' ').trim()
+            let res_entry_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(e.scientificName))
 
-            if (!res_entry_name.includes(entry_name_without_author)){
-                return
+            if (res_entry_name.includes(entry_name_without_author)){                
+                let res =  {
+                    "entry_name": entry_name[language_Entry.search_name],
+                    "found_name": res_entry_name,
+                    "accepted_name": entry_name[language_Entry.accepted_name],
+                    "base de dados": 'GBIF',
+                    'familia': e.family ? e.family : '',
+                    'pais': e.countryCode ? e.countryCode : '',
+                    'year': e.year ? e.year : '',
+                    'month': e.month ? e.month : '',
+                    'day': e.day ? e.day : '',
+                    'lat': (e.decimalLatitude && String(e.decimalLatitude).trim() !== '') ? parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+                    'long': (e.decimalLongitude && String(e.decimalLongitude).trim() !== '') ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+                }
+                return res
             }
-            let res =  {
-                "entry_name": entry_name[language_Entry.search_name],
-                "found_name": res_entry_name,
-                "accepted_name": entry_name[language_Entry.accepted_name],
-                "base de dados": 'GBIF',
-                'familia': e.family ? e.family : '',
-                'pais': e.countryCode ? e.countryCode : '',
-                'year': e.year ? e.year : '',
-                'month': e.month ? e.month : '',
-                'day': e.day ? e.day : '',
-                'lat': String(e.decimalLatitude).trim() !== '' ? parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
-                'long': String(e.decimalLongitude).trim() !== '' ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : ''
-            }
-            return res
         })
         .filter(e => e !== undefined)
+        .filter(e => e['lat']!=="" || e['long']!=="")
+    
+    // if (entries.length === 0){
+    //     entries.push({entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL'})
+    // }
 
     const set = new Set(entries.map(item => JSON.stringify(item)));
-    const dedup = [...set].map(item => JSON.parse(item));
-           
+    const dedup = [...set].map(item => JSON.parse(item));           
     return dedup
 }
 
@@ -267,8 +270,8 @@ const clearKeyNames = (o) => {
     return build
 }
 
-const getGBIFOccurrences = async () => {
-    return db.ocorrenciasSPLINK.find()
+const getGBIFOccurrences = async (query) => {
+    return db.ocorrenciasGBIF.find(query ? query : {})
         .then(occur => {
             let res = occur
                 .map(e => {

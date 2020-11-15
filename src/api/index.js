@@ -231,7 +231,7 @@ const getSpDown = async (sps) => {
                             .split(', ')
                             .map(s => {  
                                 return {
-                                    [language_Entry.search_name] : getSpeciesAndAuthor(s)[0],
+                                    [language_Entry.search_name] : removeInfraSpeciesRank(getSpeciesAndAuthorNames(s)),
                                     [language_Entry.found_name] : s,
                                     [language_Entry.accepted_name] : e[language_Entry.accepted_name]
                                 }                             
@@ -239,22 +239,18 @@ const getSpDown = async (sps) => {
                     } 
                     
                     let obj = {}
-                    obj[language_Entry.search_name] = getSpeciesAndAuthor(e[language_Entry.search_name])[0]
+                    obj[language_Entry.search_name] = removeInfraSpeciesRank(getSpeciesAndAuthorNames(e[language_Entry.search_name]))
                     obj[language_Entry.found_name] = e[language_Entry.found_name]
                     obj[language_Entry.accepted_name] = e[language_Entry.accepted_name]
 
                     res.push(obj)
                     return res 
             })
-            .reduce((a, c) => {                
-                if (!a){
-                    a = []
-                }
-                if (c){
-                    a = a.concat(c)
-                }
+            .reduce((a, c) => { 
+                a.push(...c)
                 return a
-            })
+            }, [])
+            
 
         const set = new Set(items.map(item => JSON.stringify(item)))
         items = [...set].map(item => JSON.parse(item))
@@ -266,7 +262,8 @@ const getSpeciesAndAuthor = (speciesStringName) => {
     let clear_str = speciesStringName
         .replace(/[{()}]/g, '')
         .replace(/\s\s+/g, ' ')
-    
+        .trim()
+
     if (clear_str.length<=0)
         return ['', '']
         
@@ -300,6 +297,13 @@ const getSpeciesAndAuthor = (speciesStringName) => {
 }
 
 
+const getSpeciesAndAuthorNames = (speciesStringName) => {
+    let [_name, _author] = getSpeciesAndAuthor(speciesStringName) 
+    return (_author.length > 0)  
+        ? _name + " " + _author
+        : _name
+}
+
 const getSpeciesName = (speciesStringName) => {
     return getSpeciesAndAuthor(speciesStringName)[0]
 }
@@ -309,12 +313,11 @@ const getAuthorName = (speciesStringName) => {
 }
 
 const removeInfraSpeciesRank = (speciesStringName) => {
-    return getSpeciesName(speciesStringName)
+    return getSpeciesAndAuthorNames(speciesStringName)
         .split(' ')
-        .filter(e => (Object.values(infraSpeciesRank).indexOf(e) == -1 ? true : false))
+        .filter(e => (Object.values(infraSpeciesRank).indexOf(e) === -1 ? true : false))
         .join(' ')
 }
-
 
 const infraSpeciesRank = {
     SPECIES : "sp.",
@@ -342,6 +345,6 @@ export {
     insertCSV, getCSV, updateCSV, insertOrUpdateCSV,
     loadFDBOffline, loadGBIFOffline, loadTPLOffline, deleteCSV,
     sleep, getSpDown,
-    getSpeciesAndAuthor, getSpeciesName, getAuthorName, removeInfraSpeciesRank, infraSpeciesRank
+    getSpeciesAndAuthor, getSpeciesName, getAuthorName, removeInfraSpeciesRank, infraSpeciesRank, getSpeciesAndAuthorNames
 }
 

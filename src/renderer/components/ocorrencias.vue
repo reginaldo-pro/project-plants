@@ -44,7 +44,7 @@
 <script>
     import vue2Dropzone from "vue2-dropzone";
     import ProgressBar from "vue-simple-progress";
-    import {getEntries, getSpDown, sleep} from "../../api";
+    import {getEntries, getSpDown, getSpeciesAndAuthor, getSpeciesName, sleep} from "../../api";
     import Papa from "papaparse";
     import { downloadOcorrenceGBIF, getGBIFOccurrences } from "../../api/GBIF";
     import { downloadOcorrenceSPLINK, getSPLINKOccurrences } from "../../api/Splink";
@@ -155,6 +155,60 @@
                         URL.revokeObjectURL(blob) 
                     })
             },
+            toCSV: function (name) {
+                Promise.all([getGBIFOccurrences({entry_name:name}), getSPLINKOccurrences({entry_name:name})])
+                    .then(occur => {
+                        let allOccurrences = []
+                        allOccurrences.push(...occur[0], ...occur[1])
+                        
+                        allOccurrences = allOccurrences 
+                            .filter(e => e.found_name !== '')
+                            .sort((currentElement, nextElement) => {
+                                if (currentElement.entry_name > nextElement.entry_name)
+                                    return 1 
+                                else if (currentElement.entry_name < nextElement.entry_name) 
+                                    return -1
+                                else {
+                                    if (currentElement.found_name > nextElement.found_name)
+                                        return 1
+                                    else if (currentElement.found_name > nextElement.found_name)
+                                        return -1
+                                    else {
+                                        if (currentElement.accepted_name > nextElement.accepted_name)
+                                            return 1
+                                        else if (currentElement.accepted_name > nextElement.accepted_name)
+                                            return -1
+                                        else
+                                            return 0
+                                    }
+                                }
+                            })
+
+                        const csv = Papa.unparse(allOccurrences, {
+                            quotes: true, //or array of booleans
+                            quoteChar: '"',
+                            escapeChar: '"',
+                            delimiter: ";",
+                            header: true,
+                            newline: "\r\n",
+                            skipEmptyLines: false,
+                            columns: null
+                        });
+                        
+                        let hiddenElement = document.createElement('a');
+                        const blob = new Blob([csv], { type: 'data:text/csv;charset=utf-8;' }) //type: "octet/stream"
+                        const url = URL.createObjectURL(blob);
+
+                        hiddenElement.href = URL.createObjectURL(blob);
+                        hiddenElement.target = '_blank';
+                        hiddenElement.style.visibility = 'hidden';
+                        hiddenElement.download = "Ocorrencias _" + getSpeciesName(name) + "_.csv";
+                        document.body.appendChild(hiddenElement)
+                        hiddenElement.click();
+                        document.body.removeChild(hiddenElement)
+                        URL.revokeObjectURL(blob) 
+                    })
+            },
             loadPage(csv) {
                 getEntries({fileName: csv})
                     .then(data => {                                      
@@ -175,15 +229,15 @@
                                         .then(() => {                                            
                                             return downloadOcorrenceGBIF(single_sp)   
                                         })                                          
-                                        .then(results => {                                              
+                                        .then(results => {                                 
                                             this.statusProces = "Download de ocorrências de " + single_sp[language_Entry.search_name] + " no GBIF realizado com sucesso!"
                                             results
                                                 .filter(e => e !== undefined)
-                                                .map(single_ocur => {       
+                                                .map(single_ocur => {    
                                                     this.occurFeitas += 1 
                                                     if (single_ocur.found_name.trim() !== ''){
                                                         if (this.items[single_ocur.entry_name] === undefined){
-                                                            this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 1 }                                                                           
+                                                            this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 0 }                                                                           
                                                         }                                                        
                                                         this.items[single_ocur.entry_name].count = this.items[single_ocur.entry_name].count + 1
                                                     }
@@ -222,7 +276,7 @@
                                                         this.occurFeitas += 1                                                        
                                                         if (single_ocur.found_name.trim() !== ''){
                                                             if (this.items[single_ocur.entry_name] === undefined){
-                                                                this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 1 }                                                                           
+                                                                this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 0 }                                                                           
                                                             }                                                        
                                                             this.items[single_ocur.entry_name].count = this.items[single_ocur.entry_name].count + 1
                                                         }

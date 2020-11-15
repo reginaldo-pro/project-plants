@@ -3,7 +3,7 @@ import axios from "axios";
 import most_accurate from '../classifying_input'
 import {language_Entry, language_FDB} from "../language/PTBR";
 import {cancelSource} from "./utils"
-import { getSpeciesAndAuthor } from "./index";
+import { getSpeciesAndAuthorNames, getSpeciesName, removeInfraSpeciesRank } from "./index";
 
 const FDBfind = async (obj) => {
     return db.FDB.findOne(obj)
@@ -51,28 +51,28 @@ const _FDBSearch = async (search_name) => {
                         if ((data["taxonomicstatus"] === "SINONIMO")){
                             if (data["NOME ACEITO"]){
                                 if (data["NOME ACEITO"].length === 1){
-                                    accepted_name = getSpeciesAndAuthor(data["NOME ACEITO"][0].scientificname).join(' ').trim()
+                                    accepted_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(data["NOME ACEITO"][0].scientificname))
                                 }
                                 else if (data["NOME ACEITO"].length > 1){
                                     accepted_name = data["NOME ACEITO"]
                                         .map(e  => {
-                                            return (getSpeciesAndAuthor(e["scientificname"]).join(' ').trim())
+                                            return (removeInfraSpeciesRank(getSpeciesAndAuthorNames(e["scientificname"])))
                                         })
                                         .reduce((a,c) => a + ", " + c)  
                                 }
                             }
                         } else {
-                            accepted_name = getSpeciesAndAuthor(data["scientificname"]).join(' ').trim()
+                            accepted_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(data["scientificname"]))
                         }
 
                         let obj = {}
                         obj[language_Entry.search_name] = search_name
-                        obj[language_Entry.found_name] = getSpeciesAndAuthor(data["scientificname"]).join(' ').trim()
+                        obj[language_Entry.found_name] = removeInfraSpeciesRank(getSpeciesAndAuthorNames(data["scientificname"]))
                         obj[language_Entry.accepted_name] = accepted_name
 
                         if (data.SINONIMO && data.SINONIMO.length > 0){
                             obj[language_Entry.synonyms] = data.SINONIMO.map(e  => {
-                                return (getSpeciesAndAuthor(e["scientificname"]).join(' ').trim())
+                                return (removeInfraSpeciesRank(getSpeciesAndAuthorames(e["scientificname"])))
                             })
                             .reduce((a,c) => a + ", " + c)
                         } 
@@ -96,6 +96,7 @@ const _FDBSearch = async (search_name) => {
 
 const FDBSearch = async (search_name) => {
     let key = {}
+    search_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(search_name))
     key[language_Entry.search_name] = search_name
 
     return db.FDB.findOne(key)
@@ -115,6 +116,7 @@ const FDBSearch = async (search_name) => {
 }
 
 const FDBget = async (search_name) => {
+    search_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(search_name))
     return new Promise(resolve => {
         let new_accept = {
             [language_Entry.search_name]: search_name,
@@ -136,6 +138,7 @@ const FDBget = async (search_name) => {
 
         let key = {}
         key[language_Entry.search_name] = search_name
+        
         db.FDB.findOne(key).then(item => {          
             if (item) {          
                 new_accept[language_Entry.search_name] = item[language_Entry.search_name]

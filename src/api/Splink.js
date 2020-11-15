@@ -44,34 +44,33 @@ const SPLINKUtils = (entry_name, array) => {
     let entry_name_without_author = getSpeciesAndAuthor(entry_name[language_Entry.search_name])[0]
 
     let entries = array
-    .filter(e => e !== null)
-    .map(e => {         
-        debugger   
-        let res_entry_name = getSpeciesAndAuthor(e.scientificName +  ' (' + e.scientificNameAuthorship + ')').join(' ').trim()
+        .filter(e => e !== null)
+        .map(e => {            
+            let res_entry_name = getSpeciesAndAuthor(e.scientificName +  ' (' + e.scientificNameAuthorship + ')').join(' ').trim()
 
-        if (res_entry_name.includes(entry_name_without_author)){                
-            let res = {
-                "entry_name": entry_name[language_Entry.search_name],
-                "found_name": res_entry_name,
-                "accepted_name": entry_name[language_Entry.accepted_name],
-                "base de dados": 'SPL',
-                'familia': e.family,
-                'pais': e.country,
-                'year': e.year,
-                'month': e.month ,
-                'day': e.day,
-                'lat': String(e.decimalLatitude).trim() !== '' ? parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
-                'long': String(e.decimalLongitude).trim() !== '' ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+            if (res_entry_name.includes(entry_name_without_author)){              
+                let res = {
+                    "entry_name": entry_name[language_Entry.search_name],
+                    "found_name": res_entry_name,
+                    "accepted_name": entry_name[language_Entry.accepted_name],
+                    "base de dados": 'SPL',
+                    'familia': e.family,
+                    'pais': e.country,
+                    'year': e.year,
+                    'month': e.month ,
+                    'day': e.day,
+                    'lat': (e.decimalLatitude && String(e.decimalLatitude).trim() !== '') ? parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+                    'long': (e.decimalLatitude && String(e.decimalLongitude).trim() !== '') ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
+                }
+                return res
             }
-            return res
-        }
-    })    
-    .filter(e => e !== undefined)
-    .filter(e => e['lat']!=="" || e['long']!=="")
+        })    
+        .filter(e => e !== undefined)
+        .filter(e => e['lat']!=="" || e['long']!=="")
 
-    if (entries.length === 0){
-        entries.push({entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL'})
-    }
+    // if (entries.length === 0){
+    //     entries.push({entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL'})
+    // }
 
     const set = new Set(entries.map(item => JSON.stringify(item)));
     const dedup = [...set].map(item => JSON.parse(item));
@@ -154,8 +153,8 @@ const downloadOcorrenceSPLINK = async (multi_entry_names) => {
 };
 
 
-const getSPLINKOccurrences = async () => {
-    return db.ocorrenciasSPLINK.find()
+const getSPLINKOccurrences = async (query) => {
+    return db.ocorrenciasSPLINK.find(query ? query : {})
         .then(occur => {
             let res = occur
                 .map(e => {

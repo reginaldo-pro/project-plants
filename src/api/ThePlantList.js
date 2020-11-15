@@ -3,7 +3,7 @@ import axios from "axios";
 import Papa from "papaparse";
 import most_accurate from '../classifying_input'
 import {language_Entry} from "../language/PTBR";
-import { getSpeciesAndAuthor, getSpeciesName, removeInfraSpeciesRank } from "./index";
+import { getSpeciesAndAuthorNames, getSpeciesName, removeInfraSpeciesRank } from "./index";
 
 const JSSoup = require('jssoup').default;
 
@@ -34,7 +34,7 @@ const _TPLCorrection = (search_name) => {
                 .filter(e => (e.ID !== "" && (e["Taxonomic status in TPL"] === "Accepted" || e["Taxonomic status in TPL"] === "Synonym")))
                 
             let index = most_accurate(result.map(e => {
-                return getSpeciesAndAuthor(e['Genus'] + " " + e['Species'] + " " + e['Infraspecific rank'] + " " + e['Infraspecific epithet'] + " " + e['Authorship']).join(' ')
+                return getSpeciesAndAuthorNames(e['Genus'] + " " + e['Species'] + " " + e['Infraspecific epithet'] + " " + e['Authorship'])
             }), search_name)
 
             if (index >= 0){
@@ -69,7 +69,7 @@ const _TPLSearch = (search_name) => {
                                         _name = _name.replace(_author, "(" + _author.trim() + ")")     
                                                         
                                         if (item.contents[1].getText().trim() === "Synonym" && !_name.includes('[Invalid]') && !_name.includes('[Illegitimate]')){
-                                            return removeInfraSpeciesRank(getSpeciesAndAuthor(_name).join(' '))
+                                            return removeInfraSpeciesRank(getSpeciesAndAuthorNames(_name))
                                         }         
                                                                 
                                     })    
@@ -85,7 +85,7 @@ const _TPLSearch = (search_name) => {
                                     
                             let obj = {}
                             obj[language_Entry.search_name] = search_name
-                            obj[language_Entry.found_name] = getSpeciesAndAuthor(result['Genus'].trim() + " " + result['Species'].trim() + " " + result['Infraspecific epithet'].trim() + " " + result['Authorship'].trim()).join(' ')
+                            obj[language_Entry.found_name] = getSpeciesAndAuthorNames(result['Genus'] + " " + result['Species'] + " " + result['Infraspecific epithet'] + " " + result['Authorship'])
                             obj[language_Entry.accepted_name] = obj[language_Entry.found_name]
                             obj[language_Entry.synonyms] = syn_list
                             obj[language_Entry.family] = soup.findAll('i', 'family')[0].getText().trim()
@@ -102,8 +102,8 @@ const _TPLSearch = (search_name) => {
                             
                             let obj = {}
                             obj[language_Entry.search_name] = search_name
-                            obj[language_Entry.found_name] = getSpeciesAndAuthor(result['Genus'].trim() + " " + result['Species'].trim()+ " " + result['Infraspecific epithet'].trim() + " " + result['Authorship'].trim()).join(' ')
-                            obj[language_Entry.accepted_name] = removeInfraSpeciesRank(getSpeciesAndAuthor(soup.findAll('h1')[1].find('span', {'class': 'name'}).getText(' ').trim()).join(' '))
+                            obj[language_Entry.found_name] = getSpeciesAndAuthorNames(result['Genus'] + " " + result['Species'] + " " + result['Infraspecific epithet'] + " " + result['Authorship'])
+                            obj[language_Entry.accepted_name] = removeInfraSpeciesRank(getSpeciesAndAuthorNames(soup.findAll('h1')[1].find('span', {'class': 'name'}).getText(' ')))
                             obj[language_Entry.synonyms] = []
                             obj[language_Entry.family] = soup.findAll('i', 'family')[0].getText().trim()
                             obj["results"] = result
@@ -121,7 +121,7 @@ const _TPLSearch = (search_name) => {
 
 const TPLSearch = (search_name) => {
     let key = {}
-    search_name = removeInfraSpeciesRank(getSpeciesName(search_name))
+    search_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(search_name))
     key[language_Entry.search_name] = search_name
     
     return db.TPL.findOne(key).then(data => {
@@ -157,8 +157,8 @@ const TPLget = async (search_name) => {
         }
 
         let key = {}
+        search_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(search_name))
         key[language_Entry.search_name] = search_name
-
         db.TPL.findOne(key)
             .then(item => {
                 if (item) {                                        
