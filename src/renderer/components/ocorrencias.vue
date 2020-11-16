@@ -235,12 +235,12 @@
                                                 .filter(e => e !== undefined)
                                                 .map(single_ocur => {    
                                                     this.occurFeitas += 1 
-                                                    if (single_ocur.found_name.trim() !== ''){
-                                                        if (this.items[single_ocur.entry_name] === undefined){
-                                                            this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 0 }                                                                           
-                                                        }                                                        
-                                                        this.items[single_ocur.entry_name].count = this.items[single_ocur.entry_name].count + 1
-                                                    }
+                                                    // if (single_ocur.found_name.trim() !== ''){
+                                                    //     if (this.items[single_ocur.entry_name] === undefined){
+                                                    //         this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 0 }                                                                           
+                                                    //     }                                                        
+                                                    //     this.items[single_ocur.entry_name].count = this.items[single_ocur.entry_name].count + 1
+                                                    // }
                                                 })   
                                             return Promise.resolve(true)                                                     
                                         })
@@ -270,16 +270,16 @@
                                             return downloadOcorrenceSPLINK(multiple_sp)
                                         })
                                         .then(results => {                                            
-                                            this.statusProces = "Download de ocorrências de " + multiple_sp.length + " éspécies no SpLink realizado com sucesso!"
+                                            this.statusProces = "Download de ocorrências de " + multiple_sp.length + " espécies no SpLink realizado com sucesso!"
                                             results.forEach(ocor_sp =>{
                                                     ocor_sp.map(single_ocur => {    
                                                         this.occurFeitas += 1                                                        
-                                                        if (single_ocur.found_name.trim() !== ''){
-                                                            if (this.items[single_ocur.entry_name] === undefined){
-                                                                this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 0 }                                                                           
-                                                            }                                                        
-                                                            this.items[single_ocur.entry_name].count = this.items[single_ocur.entry_name].count + 1
-                                                        }
+                                                        // if (single_ocur.found_name.trim() !== ''){
+                                                        //     if (this.items[single_ocur.entry_name] === undefined){
+                                                        //         this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 0 }                                                                           
+                                                        //     }                                                        
+                                                        //     this.items[single_ocur.entry_name].count = this.items[single_ocur.entry_name].count + 1
+                                                        // }
                                                     }) 
                                                 })
                                             return Promise.resolve(true)                                                    

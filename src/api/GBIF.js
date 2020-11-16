@@ -97,6 +97,9 @@ const OccorrenceGBIFInsert = async (entry_name, usageKey) => {
                             .then(cachedData => {
                                 if (cachedData.length>0){
                                     console.log(entry_name[language_Entry.search_name])
+                                    if (!entry_name[language_Entry.search_name] || entry_name[language_Entry.search_name].trim()=== ''){
+                                        debugger
+                                    }
                                     console.log("GBIF----")
                                     let res = GBIFutils(entry_name, usageKey, cachedData)    
                                     insertOcorrenciasGBIF(res)

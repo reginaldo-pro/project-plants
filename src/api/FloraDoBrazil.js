@@ -72,7 +72,7 @@ const _FDBSearch = async (search_name) => {
 
                         if (data.SINONIMO && data.SINONIMO.length > 0){
                             obj[language_Entry.synonyms] = data.SINONIMO.map(e  => {
-                                return (removeInfraSpeciesRank(getSpeciesAndAuthorames(e["scientificname"])))
+                                return (removeInfraSpeciesRank(getSpeciesAndAuthorNames(e["scientificname"])))
                             })
                             .reduce((a,c) => a + ", " + c)
                         } 
@@ -170,22 +170,36 @@ const FDBget = async (search_name) => {
                     if (matches2) {
                         distribuicao2 = distribuicao2.concat(matches2[0].substring(1, matches2[0].length - 1).split(','))
                     }
-                });
+                });                
                 new_accept[language_FDB.distribution] = distribuicao.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 new_accept[language_FDB.possible_distribution] = distribuicao2.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
 
                 let hierarchy = item.results["higherclassification"].split(";")
                 new_accept[language_FDB.taxonomic_group] = hierarchy[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-                new_accept[language_FDB.life_form] = item.details["formaVida"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                new_accept[language_FDB.substrate] = item.details["substrato"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                if (item.details["origem"])
-                    new_accept[language_FDB.source] = item.details["origem"].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                if (item.details["endemismo"])
-                    new_accept[language_FDB.endemism] = item.details["endemismo"].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                new_accept[language_FDB.life_form] = (item.details["formaVida"]) 
+                    ? item.details["formaVida"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                    : ''
 
-                new_accept[language_FDB.phytogeographic_domains] = item.details["dominioFitogeografico"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                new_accept[language_FDB.vegetation] = item.details["tipoVegetacao"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                new_accept[language_FDB.substrate] = (item.details["substrato"]) 
+                    ? item.details["substrato"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                    : ''
+
+                new_accept[language_FDB.source] = (item.details["origem"])
+                    ? item.details["origem"].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                    : ''
+
+                new_accept[language_FDB.endemism] =  (item.details["endemismo"])
+                    ? item.details["endemismo"].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                    : ''
+
+                new_accept[language_FDB.phytogeographic_domains] = (item.details["dominioFitogeografico"]) 
+                    ? item.details["dominioFitogeografico"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                    : ''
+
+                new_accept[language_FDB.vegetation] = (item.details["tipoVegetacao"]) 
+                    ? item.details["tipoVegetacao"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                    : ''
             }                
             resolve(new_accept)
         })
