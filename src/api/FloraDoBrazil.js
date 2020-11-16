@@ -47,7 +47,6 @@ const _FDBSearch = async (search_name) => {
                 return axios.get(consulta_taxon_fixa_publica + data["taxonid"], {cancelToken: cancelSource.token})
                     .then(response => {    
                         let accepted_name = ''
-
                         if ((data["taxonomicstatus"] === "SINONIMO")){
                             if (data["NOME ACEITO"]){
                                 if (data["NOME ACEITO"].length === 1){
@@ -64,7 +63,7 @@ const _FDBSearch = async (search_name) => {
                         } else {
                             accepted_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(data["scientificname"]))
                         }
-
+        
                         let obj = {}
                         obj[language_Entry.search_name] = search_name
                         obj[language_Entry.found_name] = removeInfraSpeciesRank(getSpeciesAndAuthorNames(data["scientificname"]))
@@ -79,12 +78,52 @@ const _FDBSearch = async (search_name) => {
                         else {
                             obj[language_Entry.synonyms] = []
                         }
-                        obj["results"] = data
-                        obj["details"] = response.data
 
-                        let hierarchy = obj.results["higherclassification"].split(";")
-                        obj[language_Entry.family] = hierarchy[2].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                        obj[language_Entry.family] = obj[language_Entry.family].split(' ')[0]    
+                        let hierarchy = data["higherclassification"].split(";")
+                        obj[language_Entry.family] = hierarchy[2].normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ')[0]
+                        obj[language_FDB.taxonomic_group] = hierarchy[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                        let distribuicao = []
+                        let distribuicao2 = []
+                        ["Sul", "Sudeste", "Norte", "Nordeste", "CentroOeste"].forEach(i => {
+                            let txt1 = response.data["distribuicaoGeograficaCerteza" + i]
+                            let txt2 = response.data["distribuicaoGeograficaDuvida" + i]
+
+                            let matches1 = (txt1) ? txt1.match(/\(([^)]+)\)/g) : ''
+                            let matches2 = (txt2) ? txt2.match(/\(([^)]+)\)/g) : ''
+                            if (matches1) {
+                                distribuicao = distribuicao.concat(matches1[0].substring(1, matches1[0].length - 1).split(','))
+                            }
+                            if (matches2) {
+                                distribuicao2 = distribuicao2.concat(matches2[0].substring(1, matches2[0].length - 1).split(','))
+                            }
+                        })                
+                        obj[language_FDB.distribution] = distribuicao.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        obj[language_FDB.possible_distribution] = distribuicao2.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+
+                        obj[language_FDB.life_form] = (response.data["formaVida"]) 
+                            ? response.data["formaVida"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                            : ''
+
+                        obj[language_FDB.substrate] = (response.data["substrato"]) 
+                            ? response.data["substrato"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                            : ''
+
+                        obj[language_FDB.source] = (response.data["origem"])
+                            ? response.data["origem"].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                            : ''
+
+                        obj[language_FDB.endemism] =  (response.data["endemismo"])
+                            ? response.data["endemismo"].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                            : ''
+
+                        obj[language_FDB.phytogeographic_domains] = (response.data["dominioFitogeografico"]) 
+                            ? response.data["dominioFitogeografico"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                            : ''
+
+                        obj[language_FDB.vegetation] = (response.data["tipoVegetacao"]) 
+                            ? response.data["tipoVegetacao"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                            : ''
 
                         return Promise.resolve(obj) 
                     })
@@ -153,53 +192,15 @@ const FDBget = async (search_name) => {
                     new_accept[language_Entry.synonyms] = item[language_Entry.synonyms]
                 }
                 new_accept[language_Entry.family] = item[language_Entry.family]
-
-                let regExp = /\(([^)]+)\)/g;
-                let regiao = ["Sul", "Sudeste", "Norte", "Nordeste", "CentroOeste"]
-                let distribuicao = []
-                let distribuicao2 = []
-                regiao.forEach(i => {
-                    let txt1 = item.details["distribuicaoGeograficaCerteza" + i]
-                    let txt2 = item.details["distribuicaoGeograficaDuvida" + i]
-
-                    let matches1 = (txt1) ? txt1.match(regExp) : ''
-                    let matches2 = (txt2) ? txt2.match(regExp) : ''
-                    if (matches1) {
-                        distribuicao = distribuicao.concat(matches1[0].substring(1, matches1[0].length - 1).split(','))
-                    }
-                    if (matches2) {
-                        distribuicao2 = distribuicao2.concat(matches2[0].substring(1, matches2[0].length - 1).split(','))
-                    }
-                });                
-                new_accept[language_FDB.distribution] = distribuicao.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                new_accept[language_FDB.possible_distribution] = distribuicao2.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-
-                let hierarchy = item.results["higherclassification"].split(";")
-                new_accept[language_FDB.taxonomic_group] = hierarchy[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-                new_accept[language_FDB.life_form] = (item.details["formaVida"]) 
-                    ? item.details["formaVida"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                    : ''
-
-                new_accept[language_FDB.substrate] = (item.details["substrato"]) 
-                    ? item.details["substrato"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                    : ''
-
-                new_accept[language_FDB.source] = (item.details["origem"])
-                    ? item.details["origem"].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                    : ''
-
-                new_accept[language_FDB.endemism] =  (item.details["endemismo"])
-                    ? item.details["endemismo"].normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                    : ''
-
-                new_accept[language_FDB.phytogeographic_domains] = (item.details["dominioFitogeografico"]) 
-                    ? item.details["dominioFitogeografico"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                    : ''
-
-                new_accept[language_FDB.vegetation] = (item.details["tipoVegetacao"]) 
-                    ? item.details["tipoVegetacao"].join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                    : ''
+                new_accept[language_FDB.distribution] = item[language_FDB.distribution]
+                new_accept[language_FDB.possible_distribution] = item[language_FDB.possible_distribution]
+                new_accept[language_FDB.taxonomic_group] = item[language_FDB.taxonomic_group]
+                new_accept[language_FDB.life_form] =  item[language_FDB.life_form]
+                new_accept[language_FDB.substrate] = item[language_FDB.substrate]
+                new_accept[language_FDB.source] = item[language_FDB.source]
+                new_accept[language_FDB.endemism] =  item[language_FDB.endemism] 
+                new_accept[language_FDB.phytogeographic_domains] = item[language_FDB.phytogeographic_domains]
+                new_accept[language_FDB.vegetation] = item[language_FDB.vegetation]
             }                
             resolve(new_accept)
         })

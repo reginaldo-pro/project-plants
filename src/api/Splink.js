@@ -94,10 +94,10 @@ const OccorrenceSPLINKInsert = (multi_entry_names) => {
                     })
                     .filter(e => e !== undefined)
 
-                if (names.length===0){
-                    let res = (multi_entry_names.map(e => ({entry_name: e[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL',}))) 
-                    return resolve(res)
-                }    
+                // if (names.length===0){
+                //     let res = (multi_entry_names.map(e => ({entry_name: e[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL',}))) 
+                //     return resolve(res)
+                // }    
 
                 let all_sp = []            
                 _download(encodeURI(names.join("/")))

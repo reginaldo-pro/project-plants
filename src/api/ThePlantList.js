@@ -105,10 +105,7 @@ const _TPLSearch = (search_name) => {
                             obj[language_Entry.found_name] = getSpeciesAndAuthorNames(result['Genus'] + " " + result['Species'] + " " + result['Infraspecific epithet'] + " " + result['Authorship'])
                             obj[language_Entry.accepted_name] = removeInfraSpeciesRank(getSpeciesAndAuthorNames(soup.findAll('h1')[1].find('span', {'class': 'name'}).getText(' ')))
                             obj[language_Entry.synonyms] = []
-                            obj[language_Entry.family] = soup.findAll('i', 'family')[0].getText().trim()
-                            obj["results"] = result
-                            obj["details"] = soup.contents[1].getText(' ')
-                                      
+                            obj[language_Entry.family] = soup.findAll('i', 'family')[0].getText().trim()                                    
                             return Promise.resolve(obj)
                         })                
                 }
@@ -145,6 +142,7 @@ const TPLfind = async (obj) => {
 }
 
 const TPLget = async (search_name) => {
+    search_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(search_name))
     return new Promise(resolve => {
         let new_accept = {
             [language_Entry.search_name]: search_name,
@@ -152,12 +150,10 @@ const TPLget = async (search_name) => {
             [language_Entry.accepted_name]: '',
             [language_Entry.synonyms]: '',
             [language_Entry.taxonomic_status]: '',
-            [language_Entry.family]: ''
-            
+            [language_Entry.family]: ''            
         }
 
-        let key = {}
-        search_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(search_name))
+        let key = {}        
         key[language_Entry.search_name] = search_name
         db.TPL.findOne(key)
             .then(item => {
