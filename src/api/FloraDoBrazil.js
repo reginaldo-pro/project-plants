@@ -85,7 +85,8 @@ const _FDBSearch = async (search_name) => {
 
                         let distribuicao = []
                         let distribuicao2 = []
-                        ["Sul", "Sudeste", "Norte", "Nordeste", "CentroOeste"].forEach(i => {
+                        let regioes = ["Sul", "Sudeste", "Norte", "Nordeste", "CentroOeste"]
+                        regioes.forEach(i => {
                             let txt1 = response.data["distribuicaoGeograficaCerteza" + i]
                             let txt2 = response.data["distribuicaoGeograficaDuvida" + i]
 
@@ -97,7 +98,8 @@ const _FDBSearch = async (search_name) => {
                             if (matches2) {
                                 distribuicao2 = distribuicao2.concat(matches2[0].substring(1, matches2[0].length - 1).split(','))
                             }
-                        })                
+                        })       
+
                         obj[language_FDB.distribution] = distribuicao.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                         obj[language_FDB.possible_distribution] = distribuicao2.join(", ").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
 
