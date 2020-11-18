@@ -5,7 +5,6 @@ import * as db from "../db";
 import { cancelSource } from "./utils";
 import { sleep, getSpeciesAndAuthor, getSpeciesName, getSpeciesAndAuthorNames, removeInfraSpeciesRank } from "./index";
 import { language_Entry } from "../language/PTBR";
-import { Debugger } from "electron";
 
 const insertOC = async (item) => {
     return await db.ocorrenciasGBIF.insert(item)
@@ -72,77 +71,36 @@ const GBIFutils = (entry_name, usageKey, array) => {
         .filter(e => e !== undefined)
         .filter(e => e['lat']!=="" || e['long']!=="")
     
-    // if (entries.length === 0){
-    //     entries.push({entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL'})
-    // }
 
     const set = new Set(entries.map(item => JSON.stringify(item)));
     const dedup = [...set].map(item => JSON.parse(item));           
     return dedup
 }
 
-const OccorrenceGBIFInsert = async (entry_name, usageKey) => {
-    return new Promise((resolve, reject) => {   
-        if (!usageKey || entry_name[language_Entry.accepted_name].trim() === ''){
-            resolve([{entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'GBIF',}])
-        }
-        else {
-            db.ocorrenciasGBIF.find({usageKey: usageKey})
-                .then(found => {                
-                    if (found.length>0){
-                        resolve(found)
-                    }
-                    else {
-                        db.cacheOcorrenciasGBIF.find({usageKey: usageKey})
-                            .then(cachedData => {
-                                if (cachedData.length>0){
-                                    console.log(entry_name[language_Entry.search_name])
-                                    if (!entry_name[language_Entry.search_name] || entry_name[language_Entry.search_name].trim()=== ''){
-                                        debugger
-                                    }
-                                    console.log("GBIF----")
-                                    let res = GBIFutils(entry_name, usageKey, cachedData)    
-                                    insertOcorrenciasGBIF(res)
-                                        .then((data) => {
-                                            resolve(data)
-                                        })
-                                }
-                                else {                                    
-                                    _download(usageKey, 0)           
-                                        .then(async data => {                        
-                                            data = data
-                                                .map(e => {                                                
-                                                    e['usageKey'] = usageKey  
-                                                    return clearKeyNames(e)                                      
-                                                })                                            
-                                            
-                                            db.cacheOcorrenciasGBIF.insert(data)
-                                                .then(insertedData => {  
-                                                    console.log("GBIF ---- " + entry_name[language_Entry.search_name])
-                                                    let res = GBIFutils(entry_name, usageKey, insertedData)    
-                                                    insertOcorrenciasGBIF(res)
-                                                        .then((data) => {
-                                                            resolve(data)
-                                                        })                                               
-                                                })                                       
-                                        })
-                                }
-                            })  
-                    }
-                })
-                .catch((e) => {
-                    reject(e)
-                })
-            }
+const OccorrenceGBIFInsert = async (multi_entry_names, usageKey) => {
+    return new Promise((resolve, reject) => {    
+        let spNames = multi_entry_names.values
+        _download(usageKey, 0)           
+            .then(async data => {    
+                for (let spName of spNames) {                                                            
+                    console.log("GBIF ---- " + spName[language_Entry.search_name])
+                    let res = GBIFutils(spName, usageKey, data)    
+                    insertOcorrenciasGBIF(res)
+                        .then((data) => {
+                            resolve(data)
+                        })   
+                }                                                                              
+            })
+            .catch((e) => {
+                reject(e)
+            })
     })
 }
 
 
 const _download = (taxon_key, offset = 0) => {
     return new Promise((resolve, reject) => {
-            let url = "https://api.gbif.org/v1/occurrence/search"
-            Debugger
-            axios.get(url, {
+            axios.get("https://api.gbif.org/v1/occurrence/search", {
                 cancelToken: cancelSource.token,
                 params: {
                     advanced: false,
@@ -161,12 +119,12 @@ const _download = (taxon_key, offset = 0) => {
                     if (results)
                         console.log("[GBIF] Download de: " + results.length + " ocorrências. (" + taxon_key + ")")
                     else 
-                    console.log("[GBIF] Download de ocorrências. (" + taxon_key + ")")
+                        console.log("[GBIF] Download de ocorrências. (" + taxon_key + ")")
 
                     if (finished){
                         resolve(results)
                     } else {
-                        sleep(2000)
+                        sleep(1000)
                             .then(() =>{
                                 _download(taxon_key, offset + 300)                            
                                     .then(new_data => {                                 
@@ -185,26 +143,31 @@ const _download = (taxon_key, offset = 0) => {
     })
 }
 
-const downloadOcorrenceGBIF = (entry_name) => {
-    return loadCorrection({name: entry_name[language_Entry.search_name]})
+const downloadOcorrenceGBIF = (multi_entry_names) => {
+    return loadCorrection({name: multi_entry_names.key})
         .then(data => {                       
             let correction = (data && (data['correction']['matchType']))
                 ? data['correction']['usageKey']
                 : null
 
-            return OccorrenceGBIFInsert(entry_name, correction)
-                    .then(data => { 
-                        return Promise.all(data)
-                    })
-                    .then(data => {
-                        let res = data.filter(e => e !== undefined)
-                        return Promise.resolve(res)
-                    })
-                    .catch(error => {
-                        console.log("Erro no download do GBIF para a espécie: " + entry_name[language_Entry.search_name])
-                        console.log(error)
-                        reject(new Error("Erro no download do GBIF para a espécie: " + entry_name[language_Entry.search_name]))
-                    })
+            if (correction){
+                return OccorrenceGBIFInsert(multi_entry_names, correction)
+                        .then(data => { 
+                            return Promise.all(data)
+                        })
+                        .then(data => {
+                            let res = data.filter(e => e !== undefined)
+                            return Promise.resolve(res)
+                        })
+                        .catch(error => {
+                            console.log("Erro no download do GBIF para a espécie: " + multi_entry_names.key)
+                            console.log(error)
+                            reject(new Error("Erro no download do GBIF para a espécie: " + multi_entry_names.key))
+                        })
+            }
+            else {
+                return Promise.resolve([])
+            }
         })
 };
 
@@ -219,10 +182,8 @@ const loadCorrection = async (obj) => {
                     if (data.length > 0) {
                         resolve(data[0])
                     } else {
-                        let url = "https://api.gbif.org/v1/species/match?name=" + obj.name + "&strict=true";
-                        //let url = "https://api.gbif.org/v1/species/search?q=" + obj.name + "&rank=SPECIES"
                         axios
-                            .get(url)
+                            .get("https://api.gbif.org/v1/species/match?name=" + obj.name + "&strict=true")
                             .catch(error => reject(error))
                             .then(response => {                                          
                                 if (!response.data || (response.data.matchType && response.data.matchType !== "EXACT")){

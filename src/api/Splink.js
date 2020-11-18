@@ -1,9 +1,7 @@
 import * as db from "../db";
 import {cancelSource} from "./utils";
 import axios from "axios";
-import Papa from "papaparse";
-import e from "express";
-import { getSpeciesAndAuthor } from "./index";
+import { getSpeciesAndAuthor, getSpeciesAndAuthorNames, getSpeciesName } from "./index";
 import { language_Entry } from "../language/PTBR";
 
 
@@ -41,12 +39,12 @@ const insertOcorrenciasSPLINK = (entry) => {
 }
 
 const SPLINKUtils = (entry_name, array) => {
-    let entry_name_without_author = getSpeciesAndAuthor(entry_name[language_Entry.search_name])[0]
+    let entry_name_without_author = getSpeciesAndAuthorNames(entry_name[language_Entry.search_name])
 
     let entries = array
         .filter(e => e !== null)
         .map(e => {            
-            let res_entry_name = getSpeciesAndAuthor(e.scientificName +  ' (' + e.scientificNameAuthorship + ')').join(' ').trim()
+            let res_entry_name = getSpeciesAndAuthorNames(e.scientificName +  ' (' + e.scientificNameAuthorship + ')')
 
             if (res_entry_name.includes(entry_name_without_author)){              
                 let res = {
@@ -68,61 +66,45 @@ const SPLINKUtils = (entry_name, array) => {
         .filter(e => e !== undefined)
         .filter(e => e['lat']!=="" || e['long']!=="")
 
-    // if (entries.length === 0){
-    //     entries.push({entry_name: entry_name[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL'})
-    // }
-
     const set = new Set(entries.map(item => JSON.stringify(item)));
     const dedup = [...set].map(item => JSON.parse(item));
     return dedup
 }
 
 const OccorrenceSPLINKInsert = (multi_entry_names) => {
-    return new Promise((resolve,reject) => {
-        let all_find = []
-        multi_entry_names.forEach(entry_name => {
-            all_find.push(db.ocorrenciasSPLINK.find({entry_name: entry_name[language_Entry.search_name]}))
-        })
+    return new Promise((resolve,reject) => {   
+        let keyNames  = multi_entry_names
+            .map(e =>{
+                return (getSpeciesName(e.key))
+            })
+            .filter(e => e !== undefined)
 
-        Promise.all(all_find)
-            .then(ocor_locais => {                        
-                ocor_locais = ocor_locais.filter(e => e.length > 0)       
-                let names  = multi_entry_names
-                    .map(e =>{
-                        if (e[language_Entry.accepted_name].trim() !== '')
-                            return (getSpeciesAndAuthor(e[language_Entry.search_name])[0])
-                    })
-                    .filter(e => e !== undefined)
-
-                // if (names.length===0){
-                //     let res = (multi_entry_names.map(e => ({entry_name: e[language_Entry.search_name], found_name:'', accepted_name:'', "base de dados": 'SPL',}))) 
-                //     return resolve(res)
-                // }    
-
-                let all_sp = []            
-                _download(encodeURI(names.join("/")))
-                    .then(data => {                        
-                        for (let sp_name of multi_entry_names) {                            
-                            console.log("SPL---- " + sp_name[language_Entry.search_name])   
-                            if (sp_name[language_Entry.accepted_name].trim() !== ''){          
-                                let res = SPLINKUtils(sp_name, data)
-                                if (res.length>0){                                
-                                    all_sp.push(insertOcorrenciasSPLINK(res))                                    
-                                }      
-                            }
-                            else {
-                                all_sp.push(Promise.resolve([{entry_name: sp_name[language_Entry.search_name], found_name:'', accepted_name:'', accepted_name:'', "base de dados": 'SPL'}]))
-                            }              
-                        }
-                        Promise.all(all_sp).then(e => {               
-                            resolve(e)
-                        })
-                    })
-                    .catch(error => {
-                        reject(error)
-                    })
+        let spNames = multi_entry_names
+            .reduce((a, c) => {
+                a.push(...c.values)
+                return a
+            }, [])
+            
+        let all_sp = []            
+        _download(encodeURI(keyNames.join("/")))
+            .then(data => {                        
+                for (let spName of spNames) {                            
+                    console.log("SPL---- " + spName[language_Entry.search_name])   
+                    if (spName[language_Entry.accepted_name].trim() !== ''){          
+                        let res = SPLINKUtils(spName, data)
+                        if (res.length>0){                                
+                            all_sp.push(insertOcorrenciasSPLINK(res))                                    
+                        }      
+                    }          
+                }
+                Promise.all(all_sp).then(e => {               
+                    resolve(e)
                 })
-    })
+            })
+            .catch(error => {
+                reject(error)
+            })
+        })
 }
 // search
 

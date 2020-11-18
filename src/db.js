@@ -1,41 +1,55 @@
 const {app} = require('electron');
-const DataStore = require('nedb-promises');
-const dbFactory = (fileName) => DataStore.create({
-    filename: `./data/${fileName}`,
-    timestampData: true,
-    autoload: true
-});
+const DataStore = require("linvodb3");
+const fs = require('fs');
+const util = require('util')
+
+const Path = require('path');
+
+const deleteFolderRecursive = function(path) {
+  if (fs.existsSync(path)) {
+    fs.readdirSync(path).forEach((file, index) => {
+      const curPath = Path.join(path, file);
+      if (fs.lstatSync(curPath).isDirectory()) { // recurse
+        deleteFolderRecursive(curPath);
+      } else { // delete file
+        fs.unlinkSync(curPath);
+      }
+    });
+    fs.rmdirSync(path);
+  }
+};
+
+const dbFolder = process.cwd() + '/data'
+if (fs.existsSync(dbFolder)) 
+    deleteFolderRecursive(dbFolder)    
+
+fs.mkdirSync(dbFolder);
+
+
+DataStore.dbPath = dbFolder;
+DataStore.prototype.findOne = util.promisify(DataStore.prototype.findOne)
+DataStore.prototype.find = util.promisify(DataStore.prototype.find)
+DataStore.prototype.insert = util.promisify(DataStore.prototype.insert)
+DataStore.prototype.update = util.promisify(DataStore.prototype.save)
+DataStore.prototype.save = util.promisify(DataStore.prototype.save)
+
+
+const dbFactory = (fileName) => {
+    return new DataStore(fileName, { /* schema, can be empty */ })
+}
 
 
 const db = {
-    entry: dbFactory('entry.db'),
-    csv: dbFactory('csv.db'),
+    entry: dbFactory('entry'),
+    
+    csv: dbFactory('csv'),
 
-    FDB: dbFactory('FDB.db'),
-    TPL: dbFactory('TPL.db'),
+    FDB: dbFactory('FDB'),
+    TPL: dbFactory('TPL'),
 
-    plantsGBIF: dbFactory('plantsGBIF.db'),
-    ocorrenciasGBIF: dbFactory('ocorrenciasGBIF.db'),
-    cacheOcorrenciasGBIF: dbFactory('cacheOcorrenciasGBIF.db'),
-    ocorrenciasSPLINK: dbFactory('ocorrenciasSPLINK.db'),
-    correctorGBIF: dbFactory('correctorGBIF.db')
+    ocorrenciasGBIF: dbFactory('ocorrenciasGBIF'),
+    ocorrenciasSPLINK: dbFactory('ocorrenciasSPLINK'),
+    correctorGBIF: dbFactory('correctorGBIF')
 };
-
-
-const dropDB = (dbName) => {
-    return db[dbName].remove({ }, { multi: true }, function (err, numRemoved) {
-        db.dbName.loadDatabase();
-      })
-};
-
-dropDB('entry')
-dropDB('csv')
-dropDB('FDB')
-dropDB('TPL')
-dropDB('plantsGBIF')
-dropDB('ocorrenciasGBIF')
-dropDB('cacheOcorrenciasGBIF')
-dropDB('ocorrenciasSPLINK')
-dropDB('correctorGBIF')
 
 module.exports = db;

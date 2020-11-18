@@ -1,7 +1,7 @@
 import {TPLget} from "./ThePlantList";
 import {FDBget} from "./FloraDoBrazil";
 import {language_Entry, language_FDB, language_TPL} from "../language/PTBR";
-import { getSpeciesAndAuthor } from ".";
+import { getAuthorName, getSpeciesAndAuthor } from ".";
 
 Object.filter = (obj, predicate) =>
     Object.keys(obj)
@@ -23,9 +23,9 @@ const relation = (FDB, TPL) => {
 
     item["Status distintos"] = (FDB[language_Entry.taxonomic_status] !== TPL[language_Entry.taxonomic_status]);
 
-    item["Autores iguais"] = (getSpeciesAndAuthor(FDB[language_Entry.accepted_name])[1] === getSpeciesAndAuthor(TPL[language_Entry.accepted_name])[1]);
+    item["Autores iguais"] = (getAuthorName(FDB[language_Entry.accepted_name]) === getAuthorName(TPL[language_Entry.accepted_name]));
 
-    item["Autores distintos"] = (getSpeciesAndAuthor(FDB[language_Entry.accepted_name])[1] !== getSpeciesAndAuthor(TPL[language_Entry.accepted_name])[1]);
+    item["Autores distintos"] = (getAuthorName(FDB[language_Entry.accepted_name]) !== getAuthorName(TPL[language_Entry.accepted_name]));
 
 
     res = Object.filter(item, item => item === true)

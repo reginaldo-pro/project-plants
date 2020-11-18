@@ -44,7 +44,7 @@
 <script>
     import vue2Dropzone from "vue2-dropzone";
     import ProgressBar from "vue-simple-progress";
-    import {getEntries, getSpDown, getSpeciesAndAuthor, getSpeciesName, sleep} from "../../api";
+    import {getEntries, getSpDown, getSpeciesAndAuthor, getSpeciesName, sleep, groupByArray} from "../../api";
     import Papa from "papaparse";
     import { downloadOcorrenceGBIF, getGBIFOccurrences } from "../../api/GBIF";
     import { downloadOcorrenceSPLINK, getSPLINKOccurrences } from "../../api/Splink";
@@ -217,20 +217,25 @@
 
                         getSpDown(data)
                             .then(sp_list => {
+                                sp_list = sp_list.filter(e => e[language_Entry.accepted_name] !== '')
                                 if (this.header.length === 0)
                                     this.header = ["Nome procurado", "Nome aceito", "Numero de ocorrencias", "Baixar"];
                                 this.spTotal = sp_list.length * 2
-                                
-                                let down_gbif =  sp_list.reduce((accumulatorPromise, single_sp) =>{
+
+                                let new_sp_list = []  
+                                new_sp_list = groupByArray(sp_list, language_Entry.search_name)
+
+                                let down_gbif =  new_sp_list.reduce((accumulatorPromise, multiple_sp) =>{
+                                    let numberSPL = multiple_sp.values.length
                                     return accumulatorPromise
                                         .then(() => {
                                             return sleep(1000)
                                         })    
                                         .then(() => {                                            
-                                            return downloadOcorrenceGBIF(single_sp)   
+                                            return downloadOcorrenceGBIF(multiple_sp)   
                                         })                                          
                                         .then(results => {                                 
-                                            this.statusProces = "Download de ocorrências de " + single_sp[language_Entry.search_name] + " no GBIF realizado com sucesso!"
+                                            this.statusProces = "Download de ocorrências de " + multiple_sp.key + " no GBIF realizado com sucesso!"
                                             results
                                                 .filter(e => e !== undefined)
                                                 .map(single_ocur => {    
@@ -245,23 +250,26 @@
                                             return Promise.resolve(true)                                                     
                                         })
                                         .catch(error => {
-                                                    this.spError.push(single_sp.search_name)
+                                                    this.spError.push(multiple_sp.key)
                                                     this.mostrarAlerta = true
                                                     console.log("Erro download de ocorrências!")
                                                     console.log(error)
                                                     return Promise.resolve(false)    
                                                 }) 
                                         .finally(() => {
-                                            this.spFeitas += 1
+                                            this.spFeitas += numberSPL
                                         })
                                 }, Promise.resolve())
-                                                              
-                                let new_sp_list = []                            
-                                for (let i = 0; i<sp_list.length; i+=10){
-                                    new_sp_list[i/10] = sp_list.slice(i, (i+10))
+                                                 
+                                sp_list = groupByArray(sp_list, language_Entry.accepted_name)
+                                new_sp_list = []
+                                const groupSize = 10                      
+                                for (let i = 0; i<sp_list.length; i+=groupSize){
+                                    new_sp_list[i/groupSize] = sp_list.slice(i, (i+groupSize))
                                 }         
         
                                 let down_spl = new_sp_list.reduce((accumulatorPromise, multiple_sp) => {
+                                    let numberSPL = multiple_sp.reduce((a,c) => {return a + c.values.length}, 0)
                                     return accumulatorPromise
                                         .then(() => {
                                             return sleep(5000)
@@ -270,7 +278,7 @@
                                             return downloadOcorrenceSPLINK(multiple_sp)
                                         })
                                         .then(results => {                                            
-                                            this.statusProces = "Download de ocorrências de " + multiple_sp.length + " espécies no SpLink realizado com sucesso!"
+                                            this.statusProces = "Download de ocorrências de " + numberSPL + " espécies no SpLink realizado com sucesso!"
                                             results.forEach(ocor_sp =>{
                                                     ocor_sp.map(single_ocur => {    
                                                         this.occurFeitas += 1                                                        
@@ -292,7 +300,7 @@
                                                     return Promise.reject(false)
                                                 }) 
                                         .finally(() => {
-                                            this.spFeitas += multiple_sp.length
+                                            this.spFeitas += numberSPL
                                         })                                          
                                 }, Promise.resolve())
 
