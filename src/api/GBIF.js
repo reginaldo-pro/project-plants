@@ -77,23 +77,35 @@ const GBIFutils = (entry_name, usageKey, array) => {
     return dedup
 }
 
-const OccorrenceGBIFInsert = async (multi_entry_names, usageKey) => {
-    return new Promise((resolve, reject) => {    
-        let spNames = multi_entry_names.values
-        _download(usageKey, 0)           
-            .then(async data => {    
-                for (let spName of spNames) {                                                            
-                    console.log("GBIF ---- " + spName[language_Entry.search_name])
-                    let res = GBIFutils(spName, usageKey, data)    
-                    insertOcorrenciasGBIF(res)
-                        .then((data) => {
-                            resolve(data)
-                        })   
-                }                                                                              
-            })
-            .catch((e) => {
-                reject(e)
-            })
+const OccorrenceGBIFInsert = async (multi_entry_names) => {
+    return new Promise((resolve, reject) => {  
+        loadCorrection({name: multi_entry_names.key})
+        .then(data => {                       
+            let usageKey = (data && (data['correction']['matchType']))
+                ? data['correction']['usageKey']
+                : null
+
+            if (usageKey){
+                let spNames = multi_entry_names.values
+                _download(usageKey, 0)           
+                    .then(async data => {    
+                        for (let spName of spNames) {                                                            
+                            console.log("GBIF ---- " + spName[language_Entry.search_name])
+                            let res = GBIFutils(spName, usageKey, data)    
+                            insertOcorrenciasGBIF(res)
+                                .then((data) => {
+                                    resolve(data)
+                                })   
+                        }                                                                              
+                    })
+                    .catch((e) => {
+                        reject(e)
+                    })                
+            }
+            else {
+                return Promise.resolve([])
+            }
+        })
     })
 }
 
@@ -144,30 +156,18 @@ const _download = (taxon_key, offset = 0) => {
 }
 
 const downloadOcorrenceGBIF = (multi_entry_names) => {
-    return loadCorrection({name: multi_entry_names.key})
-        .then(data => {                       
-            let correction = (data && (data['correction']['matchType']))
-                ? data['correction']['usageKey']
-                : null
-
-            if (correction){
-                return OccorrenceGBIFInsert(multi_entry_names, correction)
-                        .then(data => { 
-                            return Promise.all(data)
-                        })
-                        .then(data => {
-                            let res = data.filter(e => e !== undefined)
-                            return Promise.resolve(res)
-                        })
-                        .catch(error => {
-                            console.log("Erro no download do GBIF para a espécie: " + multi_entry_names.key)
-                            console.log(error)
-                            reject(new Error("Erro no download do GBIF para a espécie: " + multi_entry_names.key))
-                        })
-            }
-            else {
-                return Promise.resolve([])
-            }
+    return OccorrenceGBIFInsert(multi_entry_names)
+        .then(data => { 
+            return Promise.all(data)
+        })
+        .then(data => {
+            let res = data.filter(e => e !== undefined)
+            return Promise.resolve(res)
+        })
+        .catch(error => {
+            console.log("Erro no download do GBIF para a espécie: " + multi_entry_names.key)
+            console.log(error)
+            reject(new Error("Erro no download do GBIF para a espécie: " + multi_entry_names.key))
         })
 };
 

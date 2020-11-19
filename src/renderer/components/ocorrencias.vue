@@ -50,9 +50,6 @@
     import { downloadOcorrenceSPLINK, getSPLINKOccurrences } from "../../api/Splink";
     import { language_Entry } from '../../language/PTBR';
 
-
-    const NodeGeocoder = require('node-geocoder');
-
     export default {
         name: "ocorrencias",
         components: {
