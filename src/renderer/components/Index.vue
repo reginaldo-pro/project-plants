@@ -12,7 +12,7 @@
                        accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
                        class="input-file">
                 <p v-if="isInitial">
-                    Arrraste seu arquivo aqui<br> ou clique para encontra-lo
+                    Arraste seu arquivo aqui, <br> ou clique para encontra-lo.
                 </p>
                 <p v-if="isSaving">
                     Processando... {{ fileCount }} aguarde...

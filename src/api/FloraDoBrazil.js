@@ -1,4 +1,4 @@
-import * as db from "../db";
+import { db } from "../db";
 import axios from "axios";
 import most_accurate from '../classifying_input'
 import {language_Entry, language_FDB} from "../language/PTBR";
@@ -8,20 +8,6 @@ import { getSpeciesAndAuthorNames, getSpeciesName, removeInfraSpeciesRank } from
 const FDBfind = async (obj) => {
     return db.FDB.findOne(obj)
 }
-
-const FDBInsertOrUpdate = async (obj) => {
-    let key = {}
-    key[language_Entry.search_name] =  obj[language_Entry.search_name]
-    key[language_Entry.found_name] =  obj[language_Entry.found_name]
-    key[language_Entry.accepted_name] =  obj[language_Entry.accepted_name]
-    
-    return db.FDB.findOne(key)
-        .then(data => {
-            if (!data) {
-                return db.FDB.insert(obj)
-            }
-        })
-};
 
 const _FDBSearch = async (search_name) => {
     const consulta_taxon_name = axios.create({
@@ -129,9 +115,15 @@ const _FDBSearch = async (search_name) => {
 
                         return Promise.resolve(obj) 
                     })
+                    .catch(() =>{
+                        return Promise.resolve(null)    
+                    })
             } else {
                 return Promise.resolve(null)
             }            
+        })
+        .catch(() =>{
+            return Promise.resolve(null)
         })
 }
 
@@ -140,21 +132,22 @@ const FDBSearch = async (search_name) => {
     search_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(search_name))
     key[language_Entry.search_name] = search_name
 
-    return db.FDB.findOne(key)
-        .then(data => {
-            if (data) {
-                return Promise.resolve(data)
-            } else {
-                return _FDBSearch(search_name)
-                    .then(data => {           
-                        console.log("FDB >--- " + search_name)
-                        if (data){
-                            return FDBInsertOrUpdate(data)
-                        }
-                    })
-            }
-        })     
+    let _fdb = db.FDB.findOne(key)
+
+    if (_fdb) {
+        return _fdb
+    } else {
+        return  await _FDBSearch(search_name)
+            .then(data => {           
+                console.log("FDB >--- " + search_name)
+                if (data){
+                    db.FDB.insert(data)
+                }
+                return data
+            })
+    }
 }
+
 
 const FDBget = async (search_name) => {
     search_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(search_name))
@@ -180,32 +173,32 @@ const FDBget = async (search_name) => {
         let key = {}
         key[language_Entry.search_name] = search_name
         
-        db.FDB.findOne(key).then(item => {          
-            if (item) {          
-                new_accept[language_Entry.search_name] = item[language_Entry.search_name]
-                new_accept[language_Entry.found_name] = item[language_Entry.found_name]
-                new_accept[language_Entry.accepted_name] = item[language_Entry.accepted_name]
-                
-                new_accept[language_Entry.taxonomic_status] = (item[language_Entry.accepted_name] !== item[language_Entry.found_name]) 
-                    ? language_Entry.is_synonym 
-                    : language_Entry.is_accept
+        let _item = db.FDB.findOne(key)
+        if (_item) {          
+            new_accept[language_Entry.search_name] = _item[language_Entry.search_name]
+            new_accept[language_Entry.found_name] = _item[language_Entry.found_name]
+            new_accept[language_Entry.accepted_name] = _item[language_Entry.accepted_name]
+            
+            new_accept[language_Entry.taxonomic_status] = (_item[language_Entry.accepted_name] !== _item[language_Entry.found_name]) 
+                ? language_Entry.is_synonym 
+                : language_Entry.is_accept
 
-                if (item[language_Entry.synonyms].length > 0){
-                    new_accept[language_Entry.synonyms] = item[language_Entry.synonyms]
-                }
-                new_accept[language_Entry.family] = item[language_Entry.family]
-                new_accept[language_FDB.distribution] = item[language_FDB.distribution]
-                new_accept[language_FDB.possible_distribution] = item[language_FDB.possible_distribution]
-                new_accept[language_FDB.taxonomic_group] = item[language_FDB.taxonomic_group]
-                new_accept[language_FDB.life_form] =  item[language_FDB.life_form]
-                new_accept[language_FDB.substrate] = item[language_FDB.substrate]
-                new_accept[language_FDB.source] = item[language_FDB.source]
-                new_accept[language_FDB.endemism] =  item[language_FDB.endemism] 
-                new_accept[language_FDB.phytogeographic_domains] = item[language_FDB.phytogeographic_domains]
-                new_accept[language_FDB.vegetation] = item[language_FDB.vegetation]
-            }                
-            resolve(new_accept)
-        })
+            if (_item[language_Entry.synonyms].length > 0){
+                new_accept[language_Entry.synonyms] = _item[language_Entry.synonyms]
+            }
+            new_accept[language_Entry.family] = _item[language_Entry.family]
+            new_accept[language_FDB.distribution] = _item[language_FDB.distribution]
+            new_accept[language_FDB.possible_distribution] = _item[language_FDB.possible_distribution]
+            new_accept[language_FDB.taxonomic_group] = _item[language_FDB.taxonomic_group]
+            new_accept[language_FDB.life_form] =  _item[language_FDB.life_form]
+            new_accept[language_FDB.substrate] = _item[language_FDB.substrate]
+            new_accept[language_FDB.source] = _item[language_FDB.source]
+            new_accept[language_FDB.endemism] =  _item[language_FDB.endemism] 
+            new_accept[language_FDB.phytogeographic_domains] = _item[language_FDB.phytogeographic_domains]
+            new_accept[language_FDB.vegetation] = _item[language_FDB.vegetation]
+        }                
+        resolve(new_accept)
+
     })
 }
 export {

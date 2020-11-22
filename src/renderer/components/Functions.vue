@@ -3,7 +3,7 @@
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
             <a class="navbar-brand left" v-on:click.stop="$router.back()" href="#">Voltar</a>
             <div class="navbar-nav justify-content-center">
-                <a class="nav-item nav-link active text-center" href="#">{{csv}} <span class="sr-only">(current)</span></a>
+                <a class="nav-item nav-link active text-center" href="#">{{csv.filename}} <span class="sr-only">(current)</span></a>
             </div>
         </nav>
         <div class="container">
@@ -64,19 +64,19 @@
             <table class="table text-center">
                 <thead>
                 <tr>
-                    <th scope="col">#</th>
                     <th scope="col">Dados Cruzados</th>
                     <th scope="col">Visualizar</th>
                 </tr>
                 </thead>
-                <tbody>
 
-                <tr v-for="(item, index) in pages" :key="index" style="cursor:pointer;"
-                    v-on:click.stop="$router.push({name: 'Relation', params: item.params})">
-                    <th scope="row">{{ index }}</th>
-                    <th scope="row">{{ item.site }}</th>
-                    <th scope="row">Clique para visualizar</th>
-                </tr>
+                <tbody>
+                     <tr>
+                        <th scope="row">Flora do Brazil x The Plant List</th>
+                        <th scope="row">
+                            <a href="#"
+                            v-on:click.stop="$router.push({name:'Relation', params:{csv: this.$route.params.csv, site_a:'FDB', site_b:'TPL'}})">Visualizar</a>
+                        </th>
+                    </tr>
                 </tbody>
             </table>
 
@@ -129,7 +129,7 @@
                     </th>
                 </tr>
                 <tr>
-                    <th scope="row">Flora do Brasil + The Plant List (não encontrados)</th>
+                    <th scope="row">Não encontrados em Flora do Brasil e The Plant List.</th>
                     <th scope="row">
                         <a href="#"
                            v-on:click.stop="$router.push({name:'BaseOnline', params:{csv: csv, site_a:'FDB', site_b:'TPL'}})">Visualizar</a>
@@ -188,72 +188,74 @@
         },
         created() {
             this.csv = this.$route.params.csv
-            getEntries({fileName: this.csv}).then(data => {
-                let totalSteps = data.length;
-                this.items.forEach(item => {
-                    item.totalSteps = totalSteps
-                })
-                data.forEach(entry => {
-                    let bases = {
-                        0: {name: "FDB", req: {}},
-                        1: {name: "TPL", req: {}}
-                    }
-                    new Promise(resolve => {
-                        try {                        
-                            bases[0].req = this.load_FDB(
-                                { name: entry.name }
-                            )
-                                .then(item =>{                                    
-                                    let status_tag = {[this.accept]: 0, [this.synonym]: 1, ['']: 2};
-                                    this.status.values[0][status_tag[item.status]] += 1;
-                                    this.graph += 1;
-                                    this.items[0].completedSteps += 1;
-                                    return item    
-                                })
-                                .catch((e) => {                                    
-                                    resolve(null)
-                                })
+            let _entries = getEntries({fileName: this.csv.fileName})
+            let totalSteps = _entries.length;
+            this.items.forEach(item => {
+                item.totalSteps = totalSteps
+            })
+
+            _entries.forEach(entry => {
+                let bases = {
+                    0: {name: "FDB", req: {}},
+                    1: {name: "TPL", req: {}}
+                }
+
+                new Promise(resolve => {
+                    try {                        
+                        bases[0].req = this.load_FDB(
+                            { entry_name: entry.entry_name }
+                        )
+                            .then(item =>{                                    
+                                let status_tag = {[this.accept]: 0, [this.synonym]: 1, ['']: 2};
+                                this.status.values[0][status_tag[item.status]] += 1;
+                                this.graph += 1;
+                                this.items[0].completedSteps += 1;
+                                return item    
+                            })
+                            .catch((e) => {                                    
+                                resolve(null)
+                            })
+                        
+                        bases[1].req = this.load_TPL(
+                            { entry_name: entry.entry_name }
+                        )  
+                            .then(item =>{
+                                let status_tag = {[this.accept]: 0, [this.synonym]: 1, ['']: 2};
+                                this.status.values[1][status_tag[item.status]] += 1;
+                                this.graph += 1;
+                                this.items[1].completedSteps += 1;
+                                return item    
+                            })
+                            .catch(() => {
+                                resolve(null)
+                            })       
                             
-                            bases[1].req = this.load_TPL(
-                                { name: entry.name }
-                            )  
-                                .then(item =>{
-                                    let status_tag = {[this.accept]: 0, [this.synonym]: 1, ['']: 2};
-                                    this.status.values[1][status_tag[item.status]] += 1;
-                                    this.graph += 1;
-                                    this.items[1].completedSteps += 1;
-                                    return item    
-                                })
-                                .catch(() => {
-                                    resolve(null)
-                                })       
-                                
-                            bases[0].req
-                                .then((fdb) => {
-                                    bases[1].req
-                                        .then((tpl) => {                                            
-                                            let FDBxTPL = 0;
+                        bases[0].req
+                            .then((fdb) => {
+                                bases[1].req
+                                    .then((tpl) => {                                            
+                                        let FDBxTPL = 0;
 
-                                            let a = this.relationx2(fdb, tpl);
-                                            for (let i = 0; i < a.length; i++)
-                                                this.relation.values[i] += a[i];
-                                            this.graph2 += 1;
+                                        let a = this.relationx2(fdb, tpl);
+                                        for (let i = 0; i < a.length; i++)
+                                            this.relation.values[i] += a[i];
+                                        this.graph2 += 1;
 
-                                            let condFDB = this.items[0].completedSteps === this.items[0].totalSteps;
-                                            let condTPL = this.items[1].completedSteps === this.items[1].totalSteps;
-                                            resolve(bases)
-                                        })
-                                })
-                                .catch(() => {
-                                    resolve(null)
-                                })
-                        } catch (e) {
-                            console.log(e)
-                            resolve(null)
-                        }
-                    })
+                                        let condFDB = this.items[0].completedSteps === this.items[0].totalSteps;
+                                        let condTPL = this.items[1].completedSteps === this.items[1].totalSteps;
+                                        resolve(bases)
+                                    })
+                            })
+                            .catch(() => {
+                                resolve(null)
+                            })
+                    } catch (e) {
+                        console.log(e)
+                        resolve(null)
+                    }
                 })
             })
+            
         },
         methods: {
             reloadPage(){
@@ -264,7 +266,7 @@
                 return a;
             },
             load_FDB(obj) {                
-                return FDBSearch(obj.name)
+                return FDBSearch(obj.entry_name)
                     .then(item => {  
                         if (item) {
                             return {
@@ -280,7 +282,7 @@
                     })
             },
             load_TPL(obj) {                
-                return TPLSearch(obj.name)
+                return TPLSearch(obj.entry_name)
                     .then(item => {
                         if (item) {
                             return {
@@ -294,18 +296,6 @@
                             }
                         }
                     })                
-            },
-            load_GBIF(obj) {
-                return loadGBIF(obj).then((item) => {
-                    if (!item || !item.synonym && !item.accept) return {
-                        status: "",
-                        name: ""
-                    };
-                    return {
-                        status: item.synonym ? this.synonym : (!item.synonym && !item.accept) ? "" : this.accept,
-                        name: item.accept ? item.accept['scientificName'] : ""
-                    }
-                })
             },
             relationx2: function (a, b) {       
                 let eq = (a && b) ? a.status === b.status : false

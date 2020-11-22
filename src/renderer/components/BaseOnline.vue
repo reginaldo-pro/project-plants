@@ -3,7 +3,7 @@
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
             <a class="navbar-brand left" v-on:click.stop="$router.back()" href="#">Voltar</a>
             <div class="navbar-nav justify-content-center">
-                <a class="nav-item nav-link active text-center" href="#">{{csv}} <span class="sr-only">(current)</span></a>
+                <a class="nav-item nav-link active text-center" href="#">{{csv.fileName}} <span class="sr-only">(current)</span></a>
                 <a class="nav-item nav-link active text-center" href="#" v-on:click.stop="toCSV">Clique para Baixar
                     Planilha</a>
             </div>
@@ -46,7 +46,8 @@
     import Papa from "papaparse";
     import {FDBget} from "../../api/FloraDoBrazil";
     import {TPLget} from "../../api/ThePlantList";
-import { language_Entry } from '../../language/PTBR';
+    import { language_Entry } from '../../language/PTBR';
+import { Debugger } from 'electron';
 
     export default {
         name: "BaseOnline",
@@ -144,81 +145,68 @@ import { language_Entry } from '../../language/PTBR';
                     return item
                 })
             },
-            load_GBIF(obj) {
-                return loadGBIFOffline(obj).then((item) => {
-                    if (!item || !item.synonym && !item.accept) return {
-                        status: "",
-                        name: ""
-                    };
-                    return {
-                        status: item.synonym ? this.synonym : (!item.synonym && !item.accept) ? "" : this.accept,
-                        name: item.accept ? item.accept['scientificName'] : "",
-                        ...item.accept
-                    }
-                })
-            },
             loadPage(csv) {
-                getEntries({fileName: csv}).then(data => {
-                    this.totalSteps = data.length  
-               
-                    if (this.site_a !== "None" && this.site_b !== "None"){
-                        data.forEach(entry => {
-                            let a = this["load_" + this.site_a](entry.name)
-                            let b = this["load_" + this.site_b](entry.name)                            
+                let _entries = getEntries({fileName: csv.fileName})
+                this.totalSteps = _entries.length  
+            
+                if (this.site_a !== "None" && this.site_b !== "None"){
+                    _entries.forEach(entry => {
+                        let a = this["load_" + this.site_a](entry.entry_name)
+                        let b = this["load_" + this.site_b](entry.entry_name)                            
 
-                            Promise.all([a,b]).then(results => {                                
-                                let [SITE_A, SITE_B] = results                                            
-                                if ((!SITE_A || SITE_A[language_Entry.taxonomic_status] === '') && (!SITE_B || SITE_B[language_Entry.taxonomic_status] === '')) {
+                        Promise.all([a,b]).then(results => {                               
+                            let [SITE_A, SITE_B] = results                                            
+                            if ((!SITE_A || SITE_A[language_Entry.taxonomic_status] === '') && (!SITE_B || SITE_B[language_Entry.taxonomic_status] === '')) {
+                                this.items.push({
+                                                "Nome Pesquisado": entry.entry_name,
+                                                "Status taxonômico": "[" + this.site_a + "] [" + this.site_b + "] Não encontrado."
+                                            })
+                            } else if (!SITE_A || SITE_A[language_Entry.taxonomic_status] === ''){
+                                this.items.push({
+                                                "Nome Pesquisado": entry.entry_name,
+                                                "Status taxonômico": "[" + this.site_a + "] Não encontrado."
+                                            })
+                            } else if (!SITE_B || SITE_B[language_Entry.taxonomic_status] === ''){
                                     this.items.push({
-                                                    "Nome Pesquisado": entry.name,
-                                                    "Status taxonômico": "[" + this.site_a + "] [" + this.site_b + "] Nao encontrado"
-                                                })
-                                } else if (!SITE_A || SITE_A[language_Entry.taxonomic_status] === ''){
-                                    this.items.push({
-                                                    "Nome Pesquisado": entry.name,
-                                                    "Status taxonômico": "[" + this.site_a + "] Nao encontrado."
-                                                })
-                                } else if (!SITE_B || SITE_B[language_Entry.taxonomic_status] === ''){
-                                     this.items.push({
-                                                    "Nome Pesquisado": entry.name,
-                                                    "Status taxonômico": "[" + this.site_b + "] Nao encontrado."
-                                                })
-                                }
-                                this.completedSteps += 1;
-                            })                            
-                        })                       
-                    } else if (this.site_a !== "None"){
-                        data.forEach(entry => {                            
-                            let a = this["load_" + this.site_a](entry.name);
-                            a.then((SITE_A) => {   
-                                if (SITE_A[language_Entry.taxonomic_status] === ''){                                    
-                                    this.items.push({
-                                                    "Nome Pesquisado": entry.name,
-                                                    "Status taxonômico": "[" + this.site_a + "] Nao encontrado."
-                                                })
-                                } else {
-                                    this.items.push(SITE_A)
-                                }
-                                this.completedSteps += 1;                                
-                            })
+                                                "Nome Pesquisado": entry.entry_name,
+                                                "Status taxonômico": "[" + this.site_b + "] Não encontrado."
+                                            })
+                            }
+                            this.completedSteps += 1;
+                        })                            
+                    })                       
+                } else if (this.site_a !== "None"){
+                    _entries.forEach(entry => {                           
+                        let a = this["load_" + this.site_a](entry.entry_name);
+                        a.then((SITE_A) => {   
+                            if (SITE_A[language_Entry.taxonomic_status] === ''){                                    
+                                this.items.push({
+                                                "Nome Pesquisado": entry.entry_name,
+                                                "Status taxonômico": "[" + this.site_a + "] Nao encontrado."
+                                            })
+                            } else {
+                                this.items.push(SITE_A)
+                            }
+                            this.completedSteps += 1;                                
                         })
-                    } else if (this.site_b !== "None"){
-                        data.forEach(entry => {
-                            let b = this["load_" + this.site_b](entry.name);
-                            a.then((SITE_B) => {
-                                if (SITE_B[language_Entry.taxonomic_status] === ''){
-                                    this.items.push({
-                                                    "Nome Pesquisado": entry.name,
-                                                    "Status taxonômico": "[" + this.site_b + "] Nao encontrado."
-                                                })
-                                } else {
-                                    this.items.push(SITE_B)
-                                }
-                                this.completedSteps += 1;                                
-                            })
+                    })
+                } else if (this.site_b !== "None"){
+                    _entries.forEach(entry => {
+                        let b = this["load_" + this.site_b](entry.entry_name);
+                        a.then((SITE_B) => {
+                            if (SITE_B[language_Entry.taxonomic_status] === ''){
+                                this.items.push({
+                                                "Nome Pesquisado": entry.entry_name,
+                                                "Status taxonômico": "[" + this.site_b + "] Nao encontrado."
+                                            })
+                            } else {
+                                this.items.push(SITE_B)
+                            }
+                            this.completedSteps += 1;                                
                         })
-                    }
-                })
+                    })
+                }
+                
             }
         }
     }

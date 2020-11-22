@@ -1,41 +1,31 @@
-import * as db from "../db";
+import { db } from "../db";
 import {cancelSource} from "./utils";
 import axios from "axios";
 import { getSpeciesAndAuthor, getSpeciesAndAuthorNames, getSpeciesName } from "./index";
 import { language_Entry } from "../language/PTBR";
 
 
-const insertOC = async (item) => {
-    return await db.ocorrenciasSPLINK.insert(item)
-}
-
 const insertOcorrenciasSPLINK = (entry) => {
-    let all_inserts = []
-    entry.map(item => {
-        let key = {
-            found_name: item.found_name,
-            year: item.year,
-            month: item.month,
-            day: item.day,
-            long: item.long,
-            lat: item.lat
-        }
-        all_inserts.push(
-            db.ocorrenciasSPLINK.findOne(key)
-                .then(found => {   
-                    if (found === null) {
-                        return insertOC(item)
-                            .then(item => {
-                                return item
-                            })
-                    } 
-                })
-        )    
-    })
-    return Promise.all(all_inserts)
-        .then(ins => {
-            return Promise.resolve(ins.filter(e => e!== undefined))
+    let _res = entry
+        .map(item => {
+            let key = {
+                found_name: item.found_name,
+                year: item.year,
+                month: item.month,
+                day: item.day,
+                long: item.long,
+                lat: item.lat
+            }
+
+                let _found = db.ocorrenciasSPLINK.findOne(key)               
+                if (!_found) {
+                    db.ocorrenciasSPLINK.insert(item)
+                    return item
+                }
         })
+        .filter(e => e!== undefined)
+    db.ocorrenciasSPLINK.sync()
+    return Promise.resolve(_res)
 }
 
 const SPLINKUtils = (entry_name, array) => {

@@ -3,7 +3,7 @@
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
             <a class="navbar-brand left" v-on:click.stop="$router.back()" href="#">Voltar</a>
             <div class="navbar-nav justify-content-center">
-                <a class="nav-item nav-link active text-center" href="#">{{csv}} <span class="sr-only">(current)</span></a>
+                <a class="nav-item nav-link active text-center" href="#">{{csv.fileName}} <span class="sr-only">(current)</span></a>
                 <a class="nav-item nav-link active text-center" href="#" v-on:click.stop="toCSV">Clique para Baixar
                     Planilha</a>
             </div>
@@ -165,15 +165,12 @@
                 })
             },
             loadPage(csv) {
-                getEntries({fileName: csv}).then(data => {
-                    this.totalSteps = data.length;
-
-                    data.forEach(entry => {
-                        getTPLxFDB(entry.name).then(item => {
-                            this.completedSteps += 1;
-                            this.items.push(item)
-                        })
-
+                let _entries = getEntries({fileName: csv.fileName})
+                this.totalSteps = _entries.length;
+                _entries.forEach(entry => {
+                    getTPLxFDB(entry.entry_name).then(item => {
+                        this.completedSteps += 1;
+                        this.items.push(item)
                     })
 
                 })

@@ -5,7 +5,7 @@
                       @vdropzone-file-added="vfileAdded" @vdropzone-success="vfileSuccess">
             <div class="dropzone-custom-content">
                 <h3 class="dropzone-custom-title">Arraste e solte o arquivo csv!</h3>
-                <div class="subtitle">...o click aqui e selecione o arquivo</div>
+                <div class="subtitle">...ou click aqui e selecione o arquivo.</div>
             </div>
         </vue-dropzone>
 
@@ -40,7 +40,7 @@
     import 'vue2-dropzone/dist/vue2Dropzone.min.css'
     import Papa from 'papaparse'
     import {deleteCSV, getCSV, insertOrUpdateCSV} from "../../api";
-    import {EntryInsertOrUpdate} from "../../api/Entry";
+    import { insertOrUpdateEntry } from "../../api/Entry";
 
     export default {
         name: 'Entries',
@@ -77,8 +77,8 @@
                             step: row => {
                                 try {
                                     if (row.data) {
-                                        let entry = {name: row.data[0], fileName: files.name}
-                                        if (entry.name.trim() !== "") {
+                                        let entry = {entry_name: row.data[0], fileName: files.name}
+                                        if (entry.entry_name.trim() !== "") {
                                             sp_entries.push(entry)                                            
                                         }
                                     }
@@ -88,16 +88,8 @@
                             },
                             complete: () => {
                                 try { 
-                                    let all_p = []     
-                                    sp_entries.forEach(e => {
-                                            all_p.push(EntryInsertOrUpdate(e.name, e))
-                                        }
-                                    )
-                                    Promise.all(all_p).then(()=> {
-                                        insertOrUpdateCSV({fileName: files.name}).then(() => {
-                                            resolve(files.name)
-                                        })
-                                    })        
+                                    insertOrUpdateEntry(sp_entries)                                      
+                                    resolve(insertOrUpdateCSV({fileName: files.name}))
                                 } catch (e) {
                                     alert(e)
                                 }

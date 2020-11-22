@@ -1,4 +1,4 @@
-import * as db from "../db";
+import { db } from "../db";
 import axios from "axios";
 import Papa from "papaparse";
 import most_accurate from '../classifying_input'
@@ -6,20 +6,6 @@ import {language_Entry} from "../language/PTBR";
 import { getSpeciesAndAuthorNames, getSpeciesName, removeInfraSpeciesRank } from "./index";
 
 const JSSoup = require('jssoup').default;
-
-const TPLInsertOrUpdate = async (obj) => {
-    let key = {}
-    key[language_Entry.search_name] =  obj[language_Entry.search_name]
-    key[language_Entry.found_name] =  obj[language_Entry.found_name]
-    key[language_Entry.accepted_name] =  obj[language_Entry.accepted_name]
-
-    return db.TPL.findOne(key)
-        .then(data => {
-            if (!data) {
-                return db.TPL.insert(obj)
-            } 
-        })
-};
 
 const _TPLCorrection = (search_name) => {
     const consulta_taxon_name = "http://www.theplantlist.org/tpl1.1/search?q=" + search_name + "&csv=true"
@@ -116,25 +102,25 @@ const _TPLSearch = (search_name) => {
         })
 }
 
-const TPLSearch = (search_name) => {
+const TPLSearch = async (search_name) => {
     let key = {}
     search_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(search_name))
     key[language_Entry.search_name] = search_name
     
-    return db.TPL.findOne(key).then(data => {
-        if (data) {
-            return Promise.resolve(data)
-        } else {
-            return _TPLSearch(search_name)
-                .then(data => {       
-
-                    if (data){
-                        console.log("TPL >--- " + search_name)
-                        return TPLInsertOrUpdate(data)
-                    }
-                })
-        }
-    })
+    let _tpl = db.TPL.findOne(key)
+    
+    if (_tpl) {
+        return _tpl
+    } else {
+        return await _TPLSearch(search_name)
+            .then(data => { 
+                if (data){
+                    console.log("TPL >--- " + search_name)
+                    db.TPL.insert(data)
+                }
+                return data
+            })
+    }
 };
 
 const TPLfind = async (obj) => {
@@ -155,24 +141,23 @@ const TPLget = async (search_name) => {
 
         let key = {}        
         key[language_Entry.search_name] = search_name
-        db.TPL.findOne(key)
-            .then(item => {
-                if (item) {                                        
-                    new_accept[language_Entry.search_name] = item[language_Entry.search_name]
-                    new_accept[language_Entry.found_name] = item[language_Entry.found_name]
-                    new_accept[language_Entry.accepted_name] = item[language_Entry.accepted_name]
+        let _item = db.TPL.findOne(key)
+        if (_item) {                   
 
-                    new_accept[language_Entry.taxonomic_status] = (item[language_Entry.accepted_name] !== item[language_Entry.found_name]) 
-                        ? language_Entry.is_synonym 
-                        : language_Entry.is_accept
+            new_accept[language_Entry.search_name] = _item[language_Entry.search_name]
+            new_accept[language_Entry.found_name] = _item[language_Entry.found_name]
+            new_accept[language_Entry.accepted_name] = _item[language_Entry.accepted_name]
 
-                    if (item[language_Entry.synonyms].length > 0){
-                        new_accept[language_Entry.synonyms] = item[language_Entry.synonyms]
-                    }                    
-                    new_accept[language_Entry.family] = item[language_Entry.family] 
-                }
-                resolve(new_accept)              
-            })
+            new_accept[language_Entry.taxonomic_status] = (_item[language_Entry.accepted_name] !== _item[language_Entry.found_name]) 
+                ? language_Entry.is_synonym 
+                : language_Entry.is_accept
+
+            if (_item[language_Entry.synonyms].length > 0){
+                new_accept[language_Entry.synonyms] = _item[language_Entry.synonyms]
+            }                    
+            new_accept[language_Entry.family] = _item[language_Entry.family] 
+        }
+        resolve(new_accept)              
     })
 }
 

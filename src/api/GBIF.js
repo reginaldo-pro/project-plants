@@ -1,19 +1,14 @@
 // Corrector GBIF
 import axios from "axios";
 import { trim } from "jquery";
-import * as db from "../db";
+import { db } from "../db";
 import { cancelSource } from "./utils";
 import { sleep, getSpeciesAndAuthor, getSpeciesName, getSpeciesAndAuthorNames, removeInfraSpeciesRank } from "./index";
 import { language_Entry } from "../language/PTBR";
 
-const insertOC = async (item) => {
-    return await db.ocorrenciasGBIF.insert(item)
-}
-
-
 const insertOcorrenciasGBIF = async (entry) => {
-    return await new Promise(resolve => {
-        resolve(entry.map(item => {
+    let _res = entry
+        .map(item => {
             let key = {
                 found_name: item.found_name,
                 year: item.year,
@@ -22,27 +17,17 @@ const insertOcorrenciasGBIF = async (entry) => {
                 long: item.long,
                 lat: item.lat
             }
-            return db.ocorrenciasGBIF.findOne(key).then(found => {
-                if (found === null) {
-                    return insertOC(item).then(item => {
-                        return item
-                    })
-                }
-                return found
-            })
-        }))
-    })
+            let _found = db.ocorrenciasGBIF.findOne(key)
+            if (!_found) {
+                db.ocorrenciasGBIF.insert(item)
+                return item
+            }
+        })
+        .filter(e => e!== undefined)
+    db.ocorrenciasGBIF.sync()
+    return Promise.resolve(_res)
 }
 
-
-const insertCorrectorGBIF = async (entry) => {
-    return await db.correctorGBIF.insert(entry)
-
-}
-
-const getCorrectorGBIF = async (cond) => {
-    return await db.correctorGBIF.find(cond)
-}
 
 const GBIFutils = (entry_name, usageKey, array) => {
     let entry_name_without_author = getSpeciesName(entry_name[language_Entry.search_name]) 
@@ -80,9 +65,9 @@ const GBIFutils = (entry_name, usageKey, array) => {
 const OccorrenceGBIFInsert = async (multi_entry_names) => {
     return new Promise((resolve, reject) => {  
         loadCorrection({name: multi_entry_names.key})
-        .then(data => {                       
-            let usageKey = (data && (data['correction']['matchType']))
-                ? data['correction']['usageKey']
+        .then(correction => {                       
+            let usageKey = (correction && (correction['matchType']))
+                ? correction['usageKey']
                 : null
 
             if (usageKey){
@@ -103,7 +88,7 @@ const OccorrenceGBIFInsert = async (multi_entry_names) => {
                     })                
             }
             else {
-                return Promise.resolve([])
+                resolve([])
             }
         })
     })
@@ -157,9 +142,6 @@ const _download = (taxon_key, offset = 0) => {
 
 const downloadOcorrenceGBIF = (multi_entry_names) => {
     return OccorrenceGBIFInsert(multi_entry_names)
-        .then(data => { 
-            return Promise.all(data)
-        })
         .then(data => {
             let res = data.filter(e => e !== undefined)
             return Promise.resolve(res)
@@ -178,35 +160,24 @@ const loadCorrection = async (obj) => {
             if (!obj.name) {
                 resolve(null)
             } else {
-                getCorrectorGBIF(obj).then((data) => {
-                    if (data.length > 0) {
-                        resolve(data[0])
-                    } else {
-                        axios
-                            .get("https://api.gbif.org/v1/species/match?name=" + obj.name + "&strict=true")
-                            .catch(error => reject(error))
-                            .then(response => {                                          
-                                if (!response.data || (response.data.matchType && response.data.matchType !== "EXACT")){
-                                    resolve(null)
-                                }
-                                insertCorrectorGBIF({name: obj.name, correction: response.data}).then((data) => {
-                                    getCorrectorGBIF(obj).then(data => {
-                                        if (data.length > 0) {
-                                            resolve(data[0])
-                                        } else {
-                                            resolve(null)
-                                        }
-                                    })
-                                }).catch(() => {
-                                    resolve(null)
-                                })
-                            }).catch(() => {
+                let _correction = db.correctorGBIF.findOne(obj)
+                if (_correction && _correction.length > 0) {
+                    resolve(_correction[0])
+                } else {
+                    axios
+                        .get("https://api.gbif.org/v1/species/match?name=" + obj.name + "&strict=true")
+                        .catch(error => reject(error))
+                        .then(response => {                                          
+                            if (!response.data || (response.data.matchType && response.data.matchType !== "EXACT")){
+                                resolve(null)
+                            }
+                            db.correctorGBIF.insert({entry_name: obj.name, correction: response.data})
+                            db.correctorGBIF.sync()
+                            resolve(response.data)
+                        }).catch(() => {
                             resolve(null)
                         })
-                    }
-                }).catch(() => {
-                    resolve(null)
-                })
+                }
             }
         } catch (e) {
             resolve(null)

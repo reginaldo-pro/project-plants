@@ -1,8 +1,8 @@
-const {app} = require('electron');
-const DataStore = require("nedb-promises");
-const fs = require('fs');
+const {app} = require('electron')
+const fs = require('fs')
 const util = require('util')
-const Path = require('path');
+const Path = require('path')
+const DataStore = require("nedb-promises")
 
 const deleteFolderRecursive = function(path) {
   if (fs.existsSync(path)) {
@@ -20,9 +20,125 @@ const deleteFolderRecursive = function(path) {
 
 const dbFolder = process.cwd() + '/data'
 if (fs.existsSync(dbFolder)) 
-    deleteFolderRecursive(dbFolder)    
+      deleteFolderRecursive(dbFolder)
+fs.mkdirSync(dbFolder)    
 
-fs.mkdirSync(dbFolder);
+
+class FSDS {
+  dbFolder = dbFolder;
+  filename = null;
+  fileContents = null;
+
+  create (filename) {
+    if (!filename){
+      return null 
+    }
+    this.filename = filename
+    this.fileContents = []
+    fs.closeSync(fs.openSync(this.dbFolder + "/" + this.filename, 'w'))
+    return this
+  };
+
+  load() {
+    if (!this.filename){
+      return null
+    }    
+    if (!fs.existsSync(this.dbFolder + "/" + this.filename)){ 
+      this.create(this.filename)
+    }
+    else { 
+      const _contents = fs.readFileSync(this.dbFolder + "/" + this.filename)
+      if (_contents.length > 0){
+        this.fileContents =  JSON.parse(_contents)
+      }
+      else {
+        this.fileContents = []
+      }
+    }    
+    return this
+  };
+
+  unload() {
+    this.fileContents = []
+  }
+
+  sync() {
+    if (this.filename && this.fileContents){
+      fs.writeFileSync(this.dbFolder + "/" + this.filename, JSON.stringify(this.fileContents))
+    }
+    return this
+  };
+
+
+  close() {
+    this.sync()
+    return this
+  };
+
+  get(key) {
+    if (!key){
+      return null
+    }
+    if (!this.fileContents){
+      this.load()
+    }
+    return this.fileContents[key]
+  };
+
+  getContents() {
+    return this.fileContents
+  }
+
+  find(keys) {
+    if (!this.fileContents){
+      this.load()
+    }
+    let _res = this.fileContents
+      .filter(e  => {
+        let found = true
+        for (const [k, v] of Object.entries(keys)){
+          found = e[k] === v
+          if (!found)
+            break
+        }
+        return found
+      })
+    return _res
+  };
+
+  findOne(keys) {
+    if (!this.fileContents){
+      this.load()
+    }
+
+    for (const valueFileContent of this.fileContents){
+      let found = true
+      for (const [k, v] of Object.entries(keys)){
+        found = valueFileContent[k] === v
+        if (!found)
+          break
+      }
+      if (found) {
+        return valueFileContent
+      }
+    }
+    return null
+  };
+
+
+  insert(element) {
+    if (!this.fileContents){
+      this.load()
+    }
+    if (Array.isArray(element)) {
+      this.fileContents.push(...element)
+    }
+    else {
+      this.fileContents.push(element)
+    }
+    return this
+  }
+}
 
 
 const dbFactory = (fileName) => DataStore.create({
@@ -33,13 +149,15 @@ const dbFactory = (fileName) => DataStore.create({
 
 
 const db = {
-    entry: dbFactory('entry'),    
-    csv: dbFactory('csv'),
-    FDB: dbFactory('FDB'),
-    TPL: dbFactory('TPL'),
-    ocorrenciasGBIF: dbFactory('ocorrenciasGBIF'),
-    ocorrenciasSPLINK: dbFactory('ocorrenciasSPLINK'),
-    correctorGBIF: dbFactory('correctorGBIF')
+    csv: new FSDS().create('csv.ds'),
+    entry: new FSDS().create('entry.ds'),    
+    FDB: new FSDS().create('FDB.ds'),
+    TPL: new FSDS().create('TPL.ds'),
+    ocorrenciasGBIF: new FSDS().create('ocorrenciasGBIF.ds'),
+    ocorrenciasSPLINK: new FSDS().create('ocorrenciasSPLINK.ds'),
+    correctorGBIF: new FSDS().create('correctorGBIF.ds')
 };
 
-module.exports = db;
+export { 
+  db
+};

@@ -3,7 +3,7 @@
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
             <a class="navbar-brand left" v-on:click.stop="$router.back()" href="#">Voltar</a>
             <div class="navbar-nav justify-content-center">
-                <a class="nav-item nav-link active text-center" href="#">{{csv}} <span class="sr-only">(current)</span></a>
+                <a class="nav-item nav-link active text-center" href="#">{{csv.fileName}} <span class="sr-only">(current)</span></a>
                 <a class="nav-item nav-link active text-center" href="#" v-on:click.stop="toCSVAll">Baixar todas as
                     ocorrencias '{{csv}}'</a>
             </div>
@@ -207,110 +207,108 @@
                     })
             },
             loadPage(csv) {
-                getEntries({fileName: csv})
-                    .then(data => {                                      
-                        this.spTotal = 0
-                        this.spFeitas = 0
+                let _entries = getEntries({fileName: csv.fileName})
 
-                        getSpDown(data)
-                            .then(sp_list => {
-                                sp_list = sp_list.filter(e => e[language_Entry.accepted_name] !== '')
-                                if (this.header.length === 0)
-                                    this.header = ["Nome procurado", "Nome aceito", "Numero de ocorrencias", "Baixar"];
-                                this.spTotal = sp_list.length * 2
+                this.spTotal = 0
+                this.spFeitas = 0
+                getSpDown(_entries)
+                    .then(sp_list => {
+                        sp_list = sp_list.filter(e => e[language_Entry.accepted_name] !== '')
+                        if (this.header.length === 0)
+                            this.header = ["Nome procurado", "Nome aceito", "Numero de ocorrencias", "Baixar"];
+                        this.spTotal = sp_list.length * 2
 
-                                let new_sp_list = []  
-                                new_sp_list = groupByArray(sp_list, language_Entry.search_name)
+                        let new_sp_list = []  
+                        new_sp_list = groupByArray(sp_list, language_Entry.search_name)
+                        let down_gbif =  new_sp_list.reduce((accumulatorPromise, multiple_sp) =>{
+                            let t = new_sp_list
+                            let numberSPL = multiple_sp.values.length
+                            return accumulatorPromise
+                                .then(() => {
+                                    return sleep(1000)
+                                })    
+                                .then(() => {                                            
+                                    return downloadOcorrenceGBIF(multiple_sp)   
+                                })                                          
+                                .then(results => {                             
+                                    this.statusProces = "Download de ocorrências de " + multiple_sp.key + " no GBIF realizado com sucesso!"
+                                    results
+                                        .filter(e => e !== undefined)
+                                        .map(single_ocur => {    
+                                            this.occurFeitas += 1 
+                                            if (single_ocur.found_name.trim() !== ''){
+                                                    if (this.items[single_ocur.entry_name] === undefined){
+                                                        this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 0 }                                                                           
+                                                    }                                                        
+                                                    this.items[single_ocur.entry_name].count = this.items[single_ocur.entry_name].count + 1
+                                            }
+                                        })   
+                                    return Promise.resolve(true)                                                     
+                                })
+                                .catch(error => {
+                                            this.spError.push(multiple_sp.key)
+                                            this.mostrarAlerta = true
+                                            console.log("Erro download de ocorrências!")
+                                            console.log(error)
+                                            return Promise.resolve(false)    
+                                        }) 
+                                .finally(() => {
+                                    this.spFeitas += numberSPL
+                                })
+                        }, Promise.resolve())
+                                            
+                        sp_list = groupByArray(sp_list, language_Entry.accepted_name)
+                        new_sp_list = []
+                        const groupSize = 10                      
+                        for (let i = 0; i<sp_list.length; i+=groupSize){
+                            new_sp_list[i/groupSize] = sp_list.slice(i, (i+groupSize))
+                        }         
 
-                                let down_gbif =  new_sp_list.reduce((accumulatorPromise, multiple_sp) =>{
-                                    let numberSPL = multiple_sp.values.length
-                                    return accumulatorPromise
-                                        .then(() => {
-                                            return sleep(1000)
-                                        })    
-                                        .then(() => {                                            
-                                            return downloadOcorrenceGBIF(multiple_sp)   
-                                        })                                          
-                                        .then(results => {                                 
-                                            this.statusProces = "Download de ocorrências de " + multiple_sp.key + " no GBIF realizado com sucesso!"
-                                            results
-                                                .filter(e => e !== undefined)
-                                                .map(single_ocur => {    
-                                                    this.occurFeitas += 1 
-                                                    if (single_ocur.found_name.trim() !== ''){
-                                                         if (this.items[single_ocur.entry_name] === undefined){
-                                                             this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 0 }                                                                           
-                                                         }                                                        
-                                                         this.items[single_ocur.entry_name].count = this.items[single_ocur.entry_name].count + 1
-                                                    }
-                                                })   
-                                            return Promise.resolve(true)                                                     
+                        let down_spl = new_sp_list.reduce((accumulatorPromise, multiple_sp) => {
+                            let numberSPL = multiple_sp.reduce((a,c) => {return a + c.values.length}, 0)
+                            return accumulatorPromise
+                                .then(() => {
+                                    return sleep(5000)
+                                })
+                                .then(() => {
+                                    return downloadOcorrenceSPLINK(multiple_sp)
+                                })
+                                .then(results => {                                            
+                                    this.statusProces = "Download de ocorrências de " + numberSPL + " espécies no SpLink realizado com sucesso!"
+                                    results.forEach(ocor_sp =>{
+                                            ocor_sp.map(single_ocur => {    
+                                                this.occurFeitas += 1                                                        
+                                                if (single_ocur.found_name.trim() !== ''){
+                                                    if (this.items[single_ocur.entry_name] === undefined){
+                                                        this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 0 }                                                                           
+                                                    }                                                        
+                                                    this.items[single_ocur.entry_name].count = this.items[single_ocur.entry_name].count + 1
+                                                }
+                                            }) 
                                         })
-                                        .catch(error => {
-                                                    this.spError.push(multiple_sp.key)
-                                                    this.mostrarAlerta = true
-                                                    console.log("Erro download de ocorrências!")
-                                                    console.log(error)
-                                                    return Promise.resolve(false)    
-                                                }) 
-                                        .finally(() => {
-                                            this.spFeitas += numberSPL
-                                        })
-                                }, Promise.resolve())
-                                                 
-                                sp_list = groupByArray(sp_list, language_Entry.accepted_name)
-                                new_sp_list = []
-                                const groupSize = 10                      
-                                for (let i = 0; i<sp_list.length; i+=groupSize){
-                                    new_sp_list[i/groupSize] = sp_list.slice(i, (i+groupSize))
-                                }         
-        
-                                let down_spl = new_sp_list.reduce((accumulatorPromise, multiple_sp) => {
-                                    let numberSPL = multiple_sp.reduce((a,c) => {return a + c.values.length}, 0)
-                                    return accumulatorPromise
-                                        .then(() => {
-                                            return sleep(5000)
-                                        })
-                                        .then(() => {
-                                            return downloadOcorrenceSPLINK(multiple_sp)
-                                        })
-                                        .then(results => {                                            
-                                            this.statusProces = "Download de ocorrências de " + numberSPL + " espécies no SpLink realizado com sucesso!"
-                                            results.forEach(ocor_sp =>{
-                                                    ocor_sp.map(single_ocur => {    
-                                                        this.occurFeitas += 1                                                        
-                                                        if (single_ocur.found_name.trim() !== ''){
-                                                            if (this.items[single_ocur.entry_name] === undefined){
-                                                                this.items[single_ocur.entry_name] = { accepted_name: single_ocur.accepted_name, count: 0 }                                                                           
-                                                            }                                                        
-                                                            this.items[single_ocur.entry_name].count = this.items[single_ocur.entry_name].count + 1
-                                                        }
-                                                    }) 
-                                                })
-                                            return Promise.resolve(true)                                                    
-                                        })                                               
-                                        .catch(error => {
-                                                    this.spError = this.spError.concat(multiple_sp.map(e => e.search_name + ", "))
-                                                    this.mostrarAlerta = true
-                                                    console.log("Erro download de ocorrências!")
-                                                    console.log(error)
-                                                    return Promise.reject(false)
-                                                }) 
-                                        .finally(() => {
-                                            this.spFeitas += numberSPL
-                                        })                                          
-                                }, Promise.resolve())
+                                    return Promise.resolve(true)                                                    
+                                })                                               
+                                .catch(error => {
+                                            this.spError = this.spError.concat(multiple_sp.map(e => e.search_name + ", "))
+                                            this.mostrarAlerta = true
+                                            console.log("Erro download de ocorrências!")
+                                            console.log(error)
+                                            return Promise.reject(false)
+                                        }) 
+                                .finally(() => {
+                                    this.spFeitas += numberSPL
+                                })                                          
+                        }, Promise.resolve())
 
-                                Promise.all([down_gbif, down_spl])
-                                    .then(e => {
-                                        if (e){
-                                            this.statusProces = "Todas as ocorrências foram baixadas com sucesso!"
-                                        } else {
-                                            this.statusProces = "Problemas no download!"
-                                        }
-                                    })
-                            })                                   
-                })
+                        Promise.all([down_gbif, down_spl])
+                            .then(e => {
+                                if (e){
+                                    this.statusProces = "Todas as ocorrências foram baixadas com sucesso!"
+                                } else {
+                                    this.statusProces = "Problemas no download!"
+                                }
+                            })
+                    })                                   
             }
         }
     }

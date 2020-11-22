@@ -48,7 +48,6 @@ const getTPLxFDB = (search_name) => {
 
         let TPL = TPLget(search_name)
         let FDB = FDBget(search_name)
-
         FDB.then(item_fdb => {
             TPL.then(item_tpl => {
                 new_accept[(language_Entry.accepted_name + ' ' + language_FDB.site)] = item_fdb[language_Entry.accepted_name];

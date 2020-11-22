@@ -2,36 +2,29 @@ import axios from "axios";
 import {FDBget} from "../api/FloraDoBrazil";
 import {TPLget} from "../api/ThePlantList";
 import {language_Entry} from "../language/PTBR";
+import { db } from "../db"
 
-const db = require('../db')
 // Entry
 const insertEntry = async (entry) => {
     return await db.entry.insert(entry)
 }
 
 const getEntries = (cond) => {   
-    let entries =  db.entry.find(cond)
-        .then(data => {
-            let entries = data
-                .filter(e => e.name !== '')
-                .map(e => {
-                    return (
-                        {
-                            name: e.name.trim(),
-                            filename: e.fileName.trim()
-                        }
-                    )
-                })
-               
-            const set = new Set(entries.map(item => JSON.stringify(item)));
-            const dedup = [...set].map(item => JSON.parse(item));
-            return dedup
+    const _entryContents = db.entry.find(cond) 
+    let entries = _entryContents
+        .filter(e => e.entry_name !== '')
+        .map(e => {
+            return (
+                {
+                    entry_name: e.entry_name.trim(),
+                    filename: e.fileName.trim()
+                }
+            )
         })
-        .catch(reject => {
-            console.log("Erro na busca no BD de espécies e sinoníminas já baixadas!")
-            console.log(reject)
-        })    
-    return entries 
+        
+    const set = new Set(entries.map(item => JSON.stringify(item)));
+    const dedup = [...set].map(item => JSON.parse(item));
+    return dedup
 }
 
 // CSV
@@ -191,20 +184,16 @@ const loadGBIF = async (obj) => {
         }
     })
 }
-const insertOrUpdateCSV = async (obj) => {
-    return new Promise(resolve => {
-        return db.csv.findOne({name: obj.fileName}).then((data) => {
-            if (!data) {
-                resolve(db.csv.insert({name: obj.fileName}))
-            } else {
-                return db.csv.update({name: obj.fileName}, {name: obj.fileName}).then(d => {
-                    return db.csv.findOne({name: obj.fileName}).then(data => {
-                        resolve(data)
-                    })
-                })
-            }
-        })
-    })
+const insertOrUpdateCSV = (obj) => {
+    const found = db.csv.findOne({name: obj.fileName})
+
+    if (!found){
+        db.csv
+            .insert({filename: obj.fileName})
+            .sync()
+    }
+
+    return obj
 }
 
 const sleep = async (ms) => {
@@ -216,8 +205,8 @@ const getSpDown = async (sps) => {
     let all_down = []
     
     sps.forEach(entry => {
-        all_down.push(FDBget(entry.name))
-        all_down.push(TPLget(entry.name))
+        all_down.push(FDBget(entry.entry_name))
+        all_down.push(TPLget(entry.entry_name))
     })
     return Promise.all(all_down).then(results => {    
         let items = results
