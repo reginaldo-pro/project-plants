@@ -1,7 +1,7 @@
 <template>
     <div>
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
-            <a class="navbar-brand left" v-on:click.stop="$router.back()" href="#">Voltar</a>
+            <a class="navbar-brand left" v-on:click.stop="$router.push({name: 'Functions', params: {csv: csv}})" href="#">Voltar</a>
             <div class="navbar-nav justify-content-center">
                 <a class="nav-item nav-link active text-center" href="#">{{csv.fileName}} <span class="sr-only">(current)</span></a>
                 <a class="nav-item nav-link active text-center" href="#" v-on:click.stop="toCSV">Clique para Baixar

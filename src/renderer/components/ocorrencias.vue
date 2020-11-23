@@ -1,11 +1,11 @@
 <template>
     <div>
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
-            <a class="navbar-brand left" v-on:click.stop="$router.back()" href="#">Voltar</a>
+            <a class="navbar-brand left" v-on:click.stop="$router.push({name: 'Functions', params: {csv: csv}})" href="#">Voltar</a>
             <div class="navbar-nav justify-content-center">
                 <a class="nav-item nav-link active text-center" href="#">{{csv.fileName}} <span class="sr-only">(current)</span></a>
                 <a class="nav-item nav-link active text-center" href="#" v-on:click.stop="toCSVAll">Baixar todas as
-                    ocorrencias '{{csv}}'</a>
+                    ocorrencias '{{csv.fileName}}'</a>
             </div>
         </nav>
         <div class="pt5 nb5" id="standard-sizes" >
@@ -145,7 +145,7 @@
                         hiddenElement.href = URL.createObjectURL(blob);
                         hiddenElement.target = '_blank';
                         hiddenElement.style.visibility = 'hidden';
-                        hiddenElement.download = "Ocorrencias _" + this.csv.replace(".csv", "") + "_.csv";
+                        hiddenElement.download = "Ocorrencias _" + this.csv.fileName.replace(".csv", "") + "_.csv";
                         document.body.appendChild(hiddenElement)
                         hiddenElement.click();
                         document.body.removeChild(hiddenElement)

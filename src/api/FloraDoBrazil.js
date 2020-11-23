@@ -137,15 +137,17 @@ const FDBSearch = async (search_name) => {
     if (_fdb) {
         return _fdb
     } else {
-        return  await _FDBSearch(search_name)
+        return await _FDBSearch(search_name)
             .then(data => {           
                 console.log("FDB >--- " + search_name)
                 if (data){
                     db.FDB.insert(data)
+                    db.FDB.sync()
                 }
                 return data
             })
     }
+
 }
 
 

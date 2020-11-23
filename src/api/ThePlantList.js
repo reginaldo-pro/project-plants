@@ -117,6 +117,7 @@ const TPLSearch = async (search_name) => {
                 if (data){
                     console.log("TPL >--- " + search_name)
                     db.TPL.insert(data)
+                    db.TPL.sync()
                 }
                 return data
             })

@@ -6,26 +6,7 @@ import { language_Entry } from "../language/PTBR";
 
 
 const insertOcorrenciasSPLINK = (entry) => {
-    let _res = entry
-        .map(item => {
-            let key = {
-                found_name: item.found_name,
-                year: item.year,
-                month: item.month,
-                day: item.day,
-                long: item.long,
-                lat: item.lat
-            }
-
-                let _found = db.ocorrenciasSPLINK.findOne(key)               
-                if (!_found) {
-                    db.ocorrenciasSPLINK.insert(item)
-                    return item
-                }
-        })
-        .filter(e => e!== undefined)
-    db.ocorrenciasSPLINK.sync()
-    return Promise.resolve(_res)
+    return db.ocorrenciasSPLINK.insert(entry)
 }
 
 const SPLINKUtils = (entry_name, array) => {

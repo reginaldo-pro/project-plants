@@ -74,7 +74,7 @@
                         <th scope="row">Flora do Brazil x The Plant List</th>
                         <th scope="row">
                             <a href="#"
-                            v-on:click.stop="$router.push({name:'Relation', params:{csv: this.$route.params.csv, site_a:'FDB', site_b:'TPL'}})">Visualizar</a>
+                            v-on:click.stop="$router.push({name:'Relation', params:{csv: csv, site_a:'FDB', site_b:'TPL'}})">Visualizar</a>
                         </th>
                     </tr>
                 </tbody>
@@ -140,7 +140,6 @@
 
             <hr/>
             <h4> Baixar ocorrencias</h4>
-
 
             <a href="#" v-on:click.stop="$router.push({name:'Ocorrencias', params:{csv: csv}})"> clique para iniciar a
                 busca
