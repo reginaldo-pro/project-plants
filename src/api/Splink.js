@@ -1,12 +1,23 @@
 import { db } from "../db";
-import {cancelSource} from "./utils";
 import axios from "axios";
-import { getSpeciesAndAuthor, getSpeciesAndAuthorNames, getSpeciesName } from "./index";
+import { getSpeciesAndAuthorNames, getSpeciesName } from "./index";
 import { language_Entry } from "../language/PTBR";
+import * as rax from 'retry-axios';
+
+axios.defaults.raxConfig = {
+    retry: 5,
+    retryDelay: 5000,
+    backoffType: 'linear',
+    onRetryAttempt: err => {
+        const cfg = rax.getConfig(err);
+        console.log(`Retry attempt #${cfg.currentRetryAttempt}`);
+    }
+};
+const interceptorId = rax.attach();
 
 
 const insertOcorrenciasSPLINK = (entry) => {
-    return db.ocorrenciasSPLINK.insert(entry)
+    return db.ocorrenciasDB.insert(entry)
 }
 
 const SPLINKUtils = (entry_name, array) => {
@@ -15,19 +26,21 @@ const SPLINKUtils = (entry_name, array) => {
     let entries = array
         .filter(e => e !== null)
         .map(e => {            
-            let res_entry_name = getSpeciesAndAuthorNames(e.scientificName +  ' (' + e.scientificNameAuthorship + ')')
+            let res_entry_name = (e.scientificNameAuthorship) 
+                ? getSpeciesAndAuthorNames(e.scientificName +  ' (' + e.scientificNameAuthorship + ')')
+                : getSpeciesAndAuthorNames(e.scientificName)
 
             if (res_entry_name.includes(entry_name_without_author)){              
                 let res = {
                     "entry_name": entry_name[language_Entry.search_name],
                     "found_name": res_entry_name,
                     "accepted_name": entry_name[language_Entry.accepted_name],
-                    "base de dados": 'SPL',
-                    'familia': e.family,
-                    'pais': e.country,
-                    'year': e.year,
-                    'month': e.month ,
-                    'day': e.day,
+                    "base_de_dados": 'SPL',
+                    'familia': e.family ? e.family : '',
+                    'pais': e.countryCode ? e.countryCode : '',
+                    'year': e.year ? e.year : '',
+                    'month': e.month ? e.month : '',
+                    'day': e.day ? e.day : '',
                     'lat': (e.decimalLatitude && String(e.decimalLatitude).trim() !== '') ? parseFloat(String(e.decimalLatitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
                     'long': (e.decimalLatitude && String(e.decimalLongitude).trim() !== '') ? parseFloat(String(e.decimalLongitude).replace(/[^\d.-]/g, '')).toFixed(2) : '',
                 }
@@ -62,7 +75,7 @@ const OccorrenceSPLINKInsert = (multi_entry_names) => {
                 for (let spName of spNames) {                            
                     console.log("SPL---- " + spName[language_Entry.search_name])   
                     if (spName[language_Entry.accepted_name].trim() !== ''){          
-                        let res = SPLINKUtils(spName, data)
+                        let res = SPLINKUtils(spName, data)                        
                         if (res.length>0){                                
                             all_sp.push(insertOcorrenciasSPLINK(res))                                    
                         }      
@@ -107,7 +120,7 @@ const downloadOcorrenceSPLINK = async (multi_entry_names) => {
 
 
 const getSPLINKOccurrences = async (query) => {
-    return db.ocorrenciasSPLINK.find(query ? query : {})
+    return db.ocorrenciasDB.find(query ? query : {})
         .then(occur => {
             let res = occur
                 .map(e => {

@@ -1,13 +1,25 @@
 // Corrector GBIF
 import axios from "axios";
-import { trim } from "jquery";
 import { db } from "../db";
 import { cancelSource } from "./utils";
-import { sleep, getSpeciesAndAuthor, getSpeciesName, getSpeciesAndAuthorNames, removeInfraSpeciesRank } from "./index";
+import { sleep, getSpeciesName, getSpeciesAndAuthorNames, removeInfraSpeciesRank } from "./index";
 import { language_Entry } from "../language/PTBR";
+import * as rax from 'retry-axios';
+
+axios.defaults.raxConfig = {
+    retry: 5,
+    retryDelay: 5000,
+    backoffType: 'linear',
+    onRetryAttempt: err => {
+        const cfg = rax.getConfig(err);
+        console.log(`Retry attempt #${cfg.currentRetryAttempt}`);
+    }
+};
+const interceptorId = rax.attach();
+
 
 const insertOcorrenciasGBIF = async (entry) => {
-    return db.ocorrenciasGBIF.insert(entry)
+    return db.ocorrenciasDB.insert(entry)
 }
 
 
@@ -23,7 +35,7 @@ const GBIFutils = (entry_name, usageKey, array) => {
                     "entry_name": entry_name[language_Entry.search_name],
                     "found_name": res_entry_name,
                     "accepted_name": entry_name[language_Entry.accepted_name],
-                    "base de dados": 'GBIF',
+                    "base_de_dados": 'GBIF',
                     'familia': e.family ? e.family : '',
                     'pais': e.countryCode ? e.countryCode : '',
                     'year': e.year ? e.year : '',
@@ -188,7 +200,7 @@ const clearKeyNames = (o) => {
 }
 
 const getGBIFOccurrences = async (query) => {
-    return db.ocorrenciasGBIF.find(query ? query : {})
+    return db.ocorrenciasDB.find(query ? query : {})
         .then(occur => {
             let res = occur
                 .map(e => {

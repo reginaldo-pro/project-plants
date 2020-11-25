@@ -1,11 +1,11 @@
 import { language_Entry } from './language/PTBR'
 
-const {app} = require('electron')
+
 const fs = require('fs')
-const util = require('util')
 const Path = require('path')
 const levelup = require('levelup')
 const leveldown = require('leveldown')
+const { AsyncParser } = require('json2csv');
 
 
 const deleteFolderRecursive = function(path) {
@@ -47,19 +47,23 @@ class FSDS {
     }
     this.filename = filename
     this.fileContents = []
-    fs.closeSync(fs.openSync(this.dbFolder + "/" + this.filename, 'w'))
+    fs.closeSync(fs.openSync(this.getCompleteFileName(), 'w'))
     return this
   };
+
+  getCompleteFileName(){
+    return this.dbFolder + "/" + this.filename
+  }
 
   load() {
     if (!this.filename){
       return null
     }    
-    if (!fs.existsSync(this.dbFolder + "/" + this.filename)){ 
+    if (!fs.existsSync(this.getCompleteFileName())){ 
       this.create(this.filename)
     }
     else { 
-      const _contents = fs.readFileSync(this.dbFolder + "/" + this.filename)
+      const _contents = fs.readFileSync(this.getCompleteFileName())
       if (_contents.length > 0){
         this.fileContents =  JSON.parse(_contents)
       }
@@ -76,7 +80,7 @@ class FSDS {
 
   sync() {
     if (this.filename && this.fileContents){
-      fs.writeFileSync(this.dbFolder + "/" + this.filename, JSON.stringify(this.fileContents))
+      fs.writeFileSync(this.getCompleteFileName(), JSON.stringify(this.fileContents))
     }
     return this
   };
@@ -164,7 +168,7 @@ class LDDB {
       return null 
     }
     this.filename = filename
-    this.db = levelup(leveldown(this.dbFolder + "/" + this.filename, 'w'))
+    this.db = levelup(leveldown(this.getCompleteFileName(), 'w'))
     if (Array.isArray(primaryKeys)){
       this.pk.push(...primaryKeys)
     }
@@ -172,6 +176,10 @@ class LDDB {
       this.pk.push(primaryKeys)
     }  
     return this
+  };
+
+  getCompleteFileName(){
+    return this.dbFolder + "/" + this.filename
   };
 
   containsPK (element){
@@ -273,14 +281,55 @@ class LDDB {
   }
 }
 
+class CSVDB {
+  dbFolder = dbFolder;
+  filename = null;
+  streamWriter = null;
+
+  create (filename) {
+    if (!filename){
+      return null 
+    }
+    this.filename = filename
+    fs.closeSync(fs.openSync(this.getCompleteFileName(), 'w'))
+    this.open()
+    return this
+  }
+
+  open() {
+    this.streamWriter = fs.createWriteStream(this.getCompleteFileName(), {flags:'a'})
+  }
+
+  getCompleteFileName(){
+    return this.dbFolder + "/" + this.filename
+  }
+
+  addLevelupDB(levelupDB, opts={}){
+    const _this = this   
+    
+    const transforms = [binArrayToJson]
+    const _opts = { transforms };
+
+    const _asyncParser = new AsyncParser(opts) // AsyncParser(opts);
+    const _input = levelupDB.db.createValueStream()
+
+    return Promise.resolve(_asyncParser.fromInput(_input).toOutput(_this.streamWriter).processor.on('end', () => {_this.close();_this.open()})) 
+  }
+
+  close(){
+    this.streamWriter.close()
+  }
+}
+
+
 const db = {
     csv: new FSDS().create('csv.ds'),
     entry: new FSDS().create('entry.ds'),    
     FDB: new FSDS().create('FDB.ds'),
     TPL: new FSDS().create('TPL.ds'),
-    ocorrenciasGBIF: new LDDB().create('ocorrenciasGBIF', ['found_name', 'year', 'month', 'day', 'long', 'lat']),
-    ocorrenciasSPLINK: new LDDB().create('ocorrenciasSPLINK', ['found_name', 'year', 'month', 'day', 'long', 'lat']),
-    correctorGBIF: new FSDS().create('correctorGBIF.ds')
+    ocorrenciasDB: new LDDB().create('ocorrenciasDB', ['found_name', 'base_de_dados', 'year', 'month', 'day', 'long', 'lat']),
+    correctorGBIF: new FSDS().create('correctorGBIF.ds'),
+    ocorrencias: new CSVDB().create('ocorrencias.csv')
 };
 
 export { 

@@ -39,11 +39,12 @@ const _FDBSearch = async (search_name) => {
                                     accepted_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(data["NOME ACEITO"][0].scientificname))
                                 }
                                 else if (data["NOME ACEITO"].length > 1){
+                                    //debugger
                                     accepted_name = data["NOME ACEITO"]
                                         .map(e  => {
                                             return (removeInfraSpeciesRank(getSpeciesAndAuthorNames(e["scientificname"])))
                                         })
-                                        .reduce((a,c) => a + ", " + c)  
+                                        .join(", ")  
                                 }
                             }
                         } else {
@@ -59,7 +60,7 @@ const _FDBSearch = async (search_name) => {
                             obj[language_Entry.synonyms] = data.SINONIMO.map(e  => {
                                 return (removeInfraSpeciesRank(getSpeciesAndAuthorNames(e["scientificname"])))
                             })
-                            .reduce((a,c) => a + ", " + c)
+                            .join(", ") 
                         } 
                         else {
                             obj[language_Entry.synonyms] = []
