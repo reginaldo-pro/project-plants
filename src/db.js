@@ -297,7 +297,7 @@ class CSVDB {
   }
 
   open() {
-    this.streamWriter = fs.createWriteStream(this.getCompleteFileName(), {flags:'a'})
+    this.streamWriter = fs.createWriteStream(this.getCompleteFileName(), {flags:'a', encoding: 'utf8'})
   }
 
   getCompleteFileName(){
@@ -307,10 +307,10 @@ class CSVDB {
   addLevelupDB(levelupDB, opts={}){
     const _this = this   
     
-    const transforms = [binArrayToJson]
-    const _opts = { transforms };
+    //opts.transforms = [binArrayToJson]
+    opts.delimiter = ';' 
 
-    const _asyncParser = new AsyncParser(opts) // AsyncParser(opts);
+    const _asyncParser = new AsyncParser(opts) 
     const _input = levelupDB.db.createValueStream()
 
     return Promise.resolve(_asyncParser.fromInput(_input).toOutput(_this.streamWriter).processor.on('end', () => {_this.close();_this.open()})) 
