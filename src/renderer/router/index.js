@@ -5,7 +5,7 @@ import Entries from "../components/Entries";
 import Functions from "../components/Functions";
 import BaseOnline from "../components/BaseOnline";
 import Relation from "../components/Relation";
-import ocorrencias from "../components/ocorrencias";
+import ocorrencias from "../components/Ocorrencias";
 
 
 Vue.use(Router)

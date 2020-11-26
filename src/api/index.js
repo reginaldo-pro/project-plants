@@ -5,9 +5,6 @@ import {language_Entry} from "../language/PTBR";
 import { db } from "../db"
 
 // Entry
-const insertEntry = async (entry) => {
-    return await db.entry.insert(entry)
-}
 
 const getEntries = (cond) => {   
     const _entryContents = db.entry.find(cond) 
@@ -255,11 +252,14 @@ const getSpeciesAndAuthor = (speciesStringName) => {
 
     if (clear_str.length<=0)
         return ['', '']
-        
-    let cap_words = clear_str.match(/(\b[A-Z.][A-Za-z.]+|\b[A-Z.]\b)/g)
+
+    let cap_words = clear_str.match(/(\b[A-Z\p{Lu}][A-Za-z.\S]+|\b[A-Z.\p{Lu}]\b)/g) //.match(/(\b[A-Z.][A-Za-z.]+|\b[A-Z.]\b)/g) 
     let author = ''
     let species = ''
 
+    if (!cap_words){
+        debugger
+    }
     if (cap_words.length>1){
         let part_of_author = clear_str
             .split(cap_words[1])
@@ -338,7 +338,6 @@ const groupByArray = (xs, key)  => {
 }
 
 export {
-    insertEntry,
     getEntries,
     getPlantsFloraDoBrazil,
     getPlantsGBIF,

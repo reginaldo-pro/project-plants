@@ -20,13 +20,20 @@ const _FDBSearch = async (search_name) => {
             let result = response.data.result
             let data = null
 
+
             if (result){
                 if (result.length === 1){
                     data = result[0]
                 }
                 else if (result.length > 0){
-                    let index = most_accurate(result.map(item => item["scientificname"]), search_name)
-                    data = result[index]
+                    let _res = most_accurate(result.map(e => e["scientificname"]), search_name)
+                    if (_res){
+                        data = result.filter(e =>{
+                            let _spName = removeInfraSpeciesRank(getSpeciesAndAuthorNames(e["scientificname"]))
+                            return _spName === _res
+                        })
+                        data = data[0]
+                    }
                 }                
             }   
             if (data) {
@@ -39,7 +46,6 @@ const _FDBSearch = async (search_name) => {
                                     accepted_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(data["NOME ACEITO"][0].scientificname))
                                 }
                                 else if (data["NOME ACEITO"].length > 1){
-                                    //debugger
                                     accepted_name = data["NOME ACEITO"]
                                         .map(e  => {
                                             return (removeInfraSpeciesRank(getSpeciesAndAuthorNames(e["scientificname"])))

@@ -41,6 +41,7 @@
     import Papa from 'papaparse'
     import {deleteCSV, getCSV, insertOrUpdateCSV} from "../../api";
     import { insertOrUpdateEntry } from "../../api/Entry";
+    import { getSpeciesAndAuthorNames, removeInfraSpeciesRank } from "../../api/index";
 
     export default {
         name: 'Entries',
@@ -79,7 +80,8 @@
                                     if (row.data) {
                                         let entry = {entry_name: row.data[0], fileName: files.name}
                                         if (entry.entry_name.trim() !== "") {
-                                            sp_entries.push(entry)                                            
+                                            entry.entry_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(entry.entry_name))
+                                            sp_entries.push(entry)                                         
                                         }
                                     }
                                 } catch (e) {
@@ -87,7 +89,7 @@
                                 }
                             },
                             complete: () => {
-                                try { 
+                                try {                                     
                                     insertOrUpdateEntry(sp_entries)                                      
                                     resolve(insertOrUpdateCSV({fileName: files.name}))
                                 } catch (e) {

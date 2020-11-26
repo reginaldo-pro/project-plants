@@ -28,9 +28,18 @@ const GBIFutils = (entry_name, usageKey, array) => {
     let entries = array
         .filter(e => e != null)
         .map(e => {
-            let res_entry_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(e.scientificName))
+            let res_entry_name = (e.scientificNameAuthorship) 
+                ? removeInfraSpeciesRank(getSpeciesAndAuthorNames(e.scientificName +  ' (' + e.scientificNameAuthorship + ')'))
+                : removeInfraSpeciesRank(getSpeciesAndAuthorNames(e.scientificName))
 
-            if (res_entry_name.includes(entry_name_without_author)){                
+
+            if (e.scientificName.includes('twee')){
+                debugger
+            }
+            let res_entry_name_without_author = removeInfraSpeciesRank(getSpeciesName(e.scientificName))
+            
+
+            if (res_entry_name_without_author === entry_name_without_author){                
                 let res =  {
                     "entry_name": entry_name[language_Entry.search_name],
                     "found_name": res_entry_name,
@@ -47,8 +56,7 @@ const GBIFutils = (entry_name, usageKey, array) => {
                 return res
             }
         })
-        .filter(e => e !== undefined)
-        .filter(e => e['lat']!=="" || e['long']!=="")
+        .filter(e => (e !== undefined) && (e['lat']!=="" || e['long']!==""))
     
 
     const set = new Set(entries.map(item => JSON.stringify(item)));

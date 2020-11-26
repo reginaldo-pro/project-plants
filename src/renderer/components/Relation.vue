@@ -152,18 +152,6 @@
 
 
             },
-            load_GBIF(obj) {
-                return loadGBIFOffline(obj).then((item) => {
-                    if (!item || !item.synonym && !item.accept) return {
-                        status: "",
-                        name: ""
-                    };
-                    return {
-                        status: item.synonym ? this.synonym : (!item.synonym && !item.accept) ? "" : this.accept,
-                        name: item.accept ? item.accept['scientificName'] : ""
-                    }
-                })
-            },
             loadPage(csv) {
                 let _entries = getEntries({fileName: csv.fileName})
                 this.totalSteps = _entries.length;

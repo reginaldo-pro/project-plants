@@ -207,7 +207,7 @@
                                 .then(() => {
                                     return sleep(1000)
                                 })    
-                                .then(() => {                                            
+                                .then(() => {                                         
                                     return downloadOcorrenceGBIF(multiple_sp)   
                                 })                                          
                                 .then(results => {                             
@@ -216,7 +216,7 @@
                                         .map(single_ocur => {    
                                             this.ocorrenciasGBIF += 1 
                                         })   
-                                    this.baixadasGBIF += 1
+                                    this.baixadasGBIF += multiple_sp.values.length
                                     this.ultimaBaixadaGBIF = multiple_sp.key
                                     return Promise.resolve(true)                                                     
                                 })

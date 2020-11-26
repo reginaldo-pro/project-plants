@@ -19,13 +19,17 @@ const _TPLCorrection = (search_name) => {
             let result = data.data
                 .filter(e => (e.ID !== "" && (e["Taxonomic status in TPL"] === "Accepted" || e["Taxonomic status in TPL"] === "Synonym")))
             
-            let index = most_accurate(result.map(e => {
+            let _res = most_accurate(result.map(e => {
                 return getSpeciesAndAuthorNames(e['Genus'] + " " + e['Species'] + " " + e['Infraspecific epithet'] + " " + e['Authorship'])
             }), search_name)
 
-            if (index >= 0){
-                return Promise.resolve(result[index])
-            }
+            if (_res){
+                result = result.filter(e => {
+                    let _spName = removeInfraSpeciesRank(getSpeciesAndAuthorNames(e['Genus'] + " " + e['Species'] + " " + e['Infraspecific epithet'] + " " + e['Authorship']))
+                    return _spName === _res
+                })                
+                return Promise.resolve(result[0])
+            } 
             else {
                 return Promise.resolve(null)
             }
@@ -39,7 +43,7 @@ const _TPLSearch = (search_name) => {
     return _TPLCorrection(search_name)
         .then(result => {  
             if (result){                
-                if (result["Taxonomic status in TPL"] === "Accepted") {                                  
+                if (result["Taxonomic status in TPL"] === "Accepted") {                             
                     let consulta_taxon_fixa_publica = 'http://www.theplantlist.org/tpl1.1/record/' + result['ID'] + '?ref=tpl2'                    
                     return axios.get(consulta_taxon_fixa_publica)
                         .then(response => {                            
@@ -62,7 +66,7 @@ const _TPLSearch = (search_name) => {
                                     .filter(e => e !== undefined)
                                 
                                 if (syn_list.length>0){
-                                    syn_list = syn_list.reduce((a, c) => (c ? a + ", " + c : a))
+                                    syn_list = syn_list.join(", ")
                                 }
                             }
                             else {

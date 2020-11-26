@@ -1,23 +1,41 @@
 const levenshtein = require('js-levenshtein');
-import { getSpeciesAndAuthorNames } from "./api/index";
+import { getSpeciesAndAuthor, getSpeciesAndAuthorNames, getSpeciesName, removeInfraSpeciesRank } from "./api/index";
 
 function minArg(array) {
-    return array.indexOf(Math.min.apply(Math, array));
+    //return array.indexOf(Math.min.apply(Math, array));
+    return Math.min(...array)
 }
 
 function most_accurate(result, taxon) {   
-    let strSearch = taxon.replace(/[0-9`~!@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi, '');
-    strSearch = getSpeciesAndAuthorNames(taxon)
-    let data = result
-        .map((e) =>{
-            let strResult = e.replace(/[0-9`~!@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi, '');
-            strResult = getSpeciesAndAuthorNames(strResult)
-            if (strResult.includes(strSearch)){
-                return levenshtein(strSearch, strResult)
+    let [_taxonName, _taxonAuthor] =  getSpeciesAndAuthor(removeInfraSpeciesRank(taxon))
+    let _spName = getSpeciesAndAuthorNames(taxon)
+
+    result = result
+        .reduce((a, c) =>{
+            if (_taxonName === getSpeciesName(removeInfraSpeciesRank(c))) {
+                a.push(removeInfraSpeciesRank(getSpeciesAndAuthorNames(c)))    
             }
-        })
-        .filter(e => e !== undefined)
-    return minArg(data)
+            return a
+        }, [])
+
+    if (result.length == 1) {
+        return result[0]
+    } 
+    else if (result.length > 1){
+        if (_taxonAuthor && _taxonAuthor !== '') {
+            let levDist = result
+                .map(e => {
+                    return levenshtein(_spName, e)
+                })
+            return result[minArg(levDist)]
+        }
+        else {
+            return result[0]
+        }
+    }
+    else {
+        return null
+    }
 }
 
 export { 

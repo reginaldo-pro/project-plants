@@ -1,6 +1,6 @@
 import { db } from "../db";
 import axios from "axios";
-import { getSpeciesAndAuthorNames, getSpeciesName } from "./index";
+import { getSpeciesAndAuthorNames, getSpeciesName, removeInfraSpeciesRank } from "./index";
 import { language_Entry } from "../language/PTBR";
 import * as rax from 'retry-axios';
 
@@ -21,16 +21,18 @@ const insertOcorrenciasSPLINK = (entry) => {
 }
 
 const SPLINKUtils = (entry_name, array) => {
-    let entry_name_without_author = getSpeciesAndAuthorNames(entry_name[language_Entry.search_name])
+    let entry_name_without_author = getSpeciesName(entry_name[language_Entry.search_name])
 
     let entries = array
         .filter(e => e !== null)
         .map(e => {            
             let res_entry_name = (e.scientificNameAuthorship) 
-                ? getSpeciesAndAuthorNames(e.scientificName +  ' (' + e.scientificNameAuthorship + ')')
-                : getSpeciesAndAuthorNames(e.scientificName)
+                ? removeInfraSpeciesRank(getSpeciesAndAuthorNames(e.scientificName +  ' (' + e.scientificNameAuthorship + ')'))
+                : removeInfraSpeciesRank(getSpeciesAndAuthorNames(e.scientificName))
 
-            if (res_entry_name.includes(entry_name_without_author)){              
+            let res_entry_name_without_author = removeInfraSpeciesRank(getSpeciesName(e.scientificName))
+
+            if (res_entry_name_without_author === entry_name_without_author){              
                 let res = {
                     "entry_name": entry_name[language_Entry.search_name],
                     "found_name": res_entry_name,
@@ -47,8 +49,7 @@ const SPLINKUtils = (entry_name, array) => {
                 return res
             }
         })    
-        .filter(e => e !== undefined)
-        .filter(e => e['lat']!=="" || e['long']!=="")
+        .filter(e => (e !== undefined) && (e['lat']!=="" || e['long']!==""))
 
     const set = new Set(entries.map(item => JSON.stringify(item)));
     const dedup = [...set].map(item => JSON.parse(item));
