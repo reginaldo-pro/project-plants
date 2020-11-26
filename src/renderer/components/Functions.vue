@@ -154,7 +154,7 @@
 
 <script>
     import ProgressBar from 'vue-simple-progress'
-    import {getEntries, loadGBIF} from "../../api";
+    import {getEntries, loadGBIF, sleep} from "../../api";
     import {loadCorrection} from "../../api/GBIF";
     import {FDBSearch} from "../../api/FloraDoBrazil";
     import {TPLSearch} from "../../api/ThePlantList";
@@ -193,31 +193,31 @@
                 item.totalSteps = totalSteps
             })
 
-            _entries.forEach(entry => {
-                let bases = {
-                    0: {name: "FDB", req: {}},
-                    1: {name: "TPL", req: {}}
-                }
-
-                new Promise(resolve => {
-                    try {                        
-                        bases[0].req = this.load_FDB(
-                            { entry_name: entry.entry_name }
-                        )
-                            .then(item =>{                                    
+            _entries.reduce((accumulatorPromise, entry) =>{
+                let _loadFDB  = null
+                let _loadTPL = null
+                return accumulatorPromise
+                    .then(() =>{
+                        return sleep(2000)
+                    })
+                    .then(()=>{
+                        _loadFDB =  this.load_FDB({ entry_name: entry.entry_name })
+                        return _loadFDB
+                    })
+                    .then(() => {
+                        _loadTPL = this.load_TPL({ entry_name: entry.entry_name })
+                        return _loadTPL
+                    })
+                    .then(() => {
+                        let _loadFDBResult = _loadFDB
+                            .then(item =>{                                  
                                 let status_tag = {[this.accept]: 0, [this.synonym]: 1, ['']: 2};
                                 this.status.values[0][status_tag[item.status]] += 1;
                                 this.graph += 1;
                                 this.items[0].completedSteps += 1;
                                 return item    
                             })
-                            .catch((e) => {                                    
-                                resolve(null)
-                            })
-                        
-                        bases[1].req = this.load_TPL(
-                            { entry_name: entry.entry_name }
-                        )  
+                        let _loadTPLResult =_loadTPL
                             .then(item =>{
                                 let status_tag = {[this.accept]: 0, [this.synonym]: 1, ['']: 2};
                                 this.status.values[1][status_tag[item.status]] += 1;
@@ -225,36 +225,24 @@
                                 this.items[1].completedSteps += 1;
                                 return item    
                             })
-                            .catch(() => {
-                                resolve(null)
-                            })       
-                            
-                        bases[0].req
-                            .then((fdb) => {
-                                bases[1].req
-                                    .then((tpl) => {                                            
-                                        let FDBxTPL = 0;
 
-                                        let a = this.relationx2(fdb, tpl);
-                                        for (let i = 0; i < a.length; i++)
-                                            this.relation.values[i] += a[i];
-                                        this.graph2 += 1;
+                        return Promise.all([_loadFDBResult, _loadTPLResult])
+                            .then(e => {
+                                let [_fdb, _tpl] = e
+                                let FDBxTPL = 0;
 
-                                        let condFDB = this.items[0].completedSteps === this.items[0].totalSteps;
-                                        let condTPL = this.items[1].completedSteps === this.items[1].totalSteps;
-                                        resolve(bases)
-                                    })
+                                let a = this.relationx2(_fdb, _tpl);
+                                for (let i = 0; i < a.length; i++)
+                                    this.relation.values[i] += a[i];
+                                this.graph2 += 1;
+
+                                let condFDB = this.items[0].completedSteps === this.items[0].totalSteps;
+                                let condTPL = this.items[1].completedSteps === this.items[1].totalSteps;
+
+                                Promise.resolve(true)
                             })
-                            .catch(() => {
-                                resolve(null)
-                            })
-                    } catch (e) {
-                        console.log(e)
-                        resolve(null)
-                    }
-                })
-            })
-            
+                    })
+            }, Promise.resolve())       
         },
         methods: {
             reloadPage(){
