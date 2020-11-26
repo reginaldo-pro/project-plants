@@ -1,7 +1,7 @@
 import { db } from "../db";
 import axios from "axios";
 import Papa from "papaparse";
-import most_accurate from '../classifying_input'
+import { most_accurate }  from '../classifying_input'
 import {language_Entry} from "../language/PTBR";
 import { getSpeciesAndAuthorNames, getSpeciesName, removeInfraSpeciesRank } from "./index";
 
@@ -18,7 +18,7 @@ const _TPLCorrection = (search_name) => {
             
             let result = data.data
                 .filter(e => (e.ID !== "" && (e["Taxonomic status in TPL"] === "Accepted" || e["Taxonomic status in TPL"] === "Synonym")))
-                
+            
             let index = most_accurate(result.map(e => {
                 return getSpeciesAndAuthorNames(e['Genus'] + " " + e['Species'] + " " + e['Infraspecific epithet'] + " " + e['Authorship'])
             }), search_name)

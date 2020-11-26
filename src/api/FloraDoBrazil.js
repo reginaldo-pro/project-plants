@@ -1,6 +1,6 @@
 import { db } from "../db";
 import axios from "axios";
-import most_accurate from '../classifying_input'
+import { most_accurate }  from '../classifying_input'
 import {language_Entry, language_FDB} from "../language/PTBR";
 import {cancelSource} from "./utils"
 import { getSpeciesAndAuthorNames, getSpeciesName, removeInfraSpeciesRank } from "./index";
