@@ -32,10 +32,6 @@ const GBIFutils = (entry_name, usageKey, array) => {
                 ? removeInfraSpeciesRank(getSpeciesAndAuthorNames(e.scientificName +  ' (' + e.scientificNameAuthorship + ')'))
                 : removeInfraSpeciesRank(getSpeciesAndAuthorNames(e.scientificName))
 
-
-            if (e.scientificName.includes('twee')){
-                debugger
-            }
             let res_entry_name_without_author = removeInfraSpeciesRank(getSpeciesName(e.scientificName))
             
 

@@ -257,9 +257,6 @@ const getSpeciesAndAuthor = (speciesStringName) => {
     let author = ''
     let species = ''
 
-    if (!cap_words){
-        debugger
-    }
     if (cap_words.length>1){
         let part_of_author = clear_str
             .split(cap_words[1])
