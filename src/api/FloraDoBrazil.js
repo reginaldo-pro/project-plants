@@ -56,7 +56,7 @@ const _FDBSearch = async (search_name) => {
                         } else {
                             accepted_name = removeInfraSpeciesRank(getSpeciesAndAuthorNames(data["scientificname"]))
                         }
-        
+
                         let obj = {}
                         obj[language_Entry.search_name] = search_name
                         obj[language_Entry.found_name] = removeInfraSpeciesRank(getSpeciesAndAuthorNames(data["scientificname"]))

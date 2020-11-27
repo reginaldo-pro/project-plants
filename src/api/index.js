@@ -253,7 +253,7 @@ const getSpeciesAndAuthor = (speciesStringName) => {
     if (clear_str.length<=0)
         return ['', '']
 
-    let cap_words = clear_str.match(/(\b[A-Z\p{Lu}][A-Za-z.\S]+|\b[A-Z.\p{Lu}]\b)/g) //.match(/(\b[A-Z.][A-Za-z.]+|\b[A-Z.]\b)/g) 
+    let cap_words = clear_str.match(/(\b[A-Z\u00C0-\u00DC\u00E0-\u00FC][A-Za-z.\u00C0-\u00DC\u00E0-\u00FC]+|\b[A-Z.\u00C0-\u00DC\u00E0-\u00FC]\b)/g) //.match(/(\b[A-Z][A-Za-z.]+|\b[A-Z.]\b)/g) 
     let author = ''
     let species = ''
 

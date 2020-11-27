@@ -198,7 +198,7 @@
                 let _loadTPL = null
                 return accumulatorPromise
                     .then(() =>{
-                        return sleep(2000)
+                        return sleep(500)
                     })
                     .then(()=>{
                         _loadFDB =  this.load_FDB({ entry_name: entry.entry_name })

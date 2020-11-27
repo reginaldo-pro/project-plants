@@ -70,7 +70,7 @@ const OccorrenceGBIFInsert = async (multi_entry_names) => {
 
             if (usageKey){
                 let spNames = multi_entry_names.values
-                _download(usageKey, 0)           
+                _download(usageKey, multi_entry_names.key, 0)           
                     .then(async data => {    
                         for (let spName of spNames) {                                                            
                             console.log("GBIF ---- " + spName[language_Entry.search_name])
@@ -93,7 +93,7 @@ const OccorrenceGBIFInsert = async (multi_entry_names) => {
 }
 
 
-const _download = (taxon_key, offset = 0) => {
+const _download = (taxon_key, sp_name, offset = 0) => {
     return new Promise((resolve, reject) => {
             axios.get("https://api.gbif.org/v1/occurrence/search", {
                 cancelToken: cancelSource.token,
@@ -110,18 +110,18 @@ const _download = (taxon_key, offset = 0) => {
                     let data = response.data
                     let results = data['results']
                     let finished = data['endOfRecords']  
-                    
-                    if (results)
-                        console.log("[GBIF] Download de: " + results.length + " ocorrências. (" + taxon_key + ")")
-                    else 
-                        console.log("[GBIF] Download de ocorrências. (" + taxon_key + ")")
+
+                    if (results) {
+                        console.log("[GBIF] Download de: " + results.length + " ocorrências. (" + sp_name + ")")
+                    }
+
 
                     if (finished){
                         resolve(results)
                     } else {
                         sleep(1000)
                             .then(() =>{
-                                _download(taxon_key, offset + 300)                            
+                                _download(taxon_key, sp_name, offset + 300)                            
                                     .then(new_data => {                                 
                                         resolve(new_data.concat(results) )
                                     }).catch((e) => {
