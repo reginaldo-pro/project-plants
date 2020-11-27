@@ -6,7 +6,7 @@
 
 <script>
   export default {
-    name: 'plantsviewer'
+    name: 'TaxonHub'
   }
 </script>
 

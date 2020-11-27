@@ -39,8 +39,8 @@ npm manifest:
       "rebuild": "electron-rebuild -f -w sqlite3"
     },
     "build": {
-      "productName": "plantsviewer",
-      "appId": "plants",
+      "productName": "taxonhub",
+      "appId": "takonhub",
       "directories": {
         "output": "build"
       },

@@ -19,6 +19,7 @@ const relation = (FDB, TPL) => {
     if (arr.length > 0)
         return arr.join(", ");
 
+    debugger
     item["Status igual"] = (FDB[language_Entry.taxonomic_status] === TPL[language_Entry.taxonomic_status]);
 
     item["Status distintos"] = (FDB[language_Entry.taxonomic_status] !== TPL[language_Entry.taxonomic_status]);

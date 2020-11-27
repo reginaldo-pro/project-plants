@@ -1,9 +1,19 @@
 {
-  "name": "pesquisadetaxon",
-  "version": "3.0.1",
-  "author": "Gabriel Choptian <choptian@alunos.utfpr.edu.br>",
-  "description": "A Viewer of plants 2",
-  "license": null,
+  "name": "taxonhub",
+  "version": "1.0.0",
+  "contributors": [
+      { 
+        "name" : "Reginaldo Ré",
+        "email" : "<reginaldo@utfpr.edu.br>"
+      },
+      { 
+        "name" : "Gabriel Choptian",
+        "email" : "<choptian@alunos.utfpr.edu.br>"
+      }
+
+  ],
+  "description": "A Hub of data about taxons of: The Plant List, Flra do Brasil, GBIF and SpeciesLink",
+  "license": "MIT License",
   "main": "./dist/electron/main.js",
   "scripts": {
     "build": "node .electron-vue/build.js && electron-builder",
@@ -20,8 +30,8 @@
     "unit": "karma start test/unit/karma.conf.js"
   },
   "build": {
-    "productName": "Plants Viewer - Occorrencias GBIF e SPLINK",
-    "appId": "plants",
+    "productName": "TaxonHub",
+    "appId": "TaxonHub",
     "directories": {
       "output": "build"
     },
